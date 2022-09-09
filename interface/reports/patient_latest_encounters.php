@@ -1,13 +1,15 @@
 <?php
 
 /**
+ * Version 1.0.0
+ *
  * Latest Encounters report -
  * This report lists patients that were seen within a given date
  * range, or all patients if no date range is entered. It gives details of the latest encounter: facility, provider, patient, dob, gender
  * and reason for the encounter
  *
  * created by Ruth Moulton from report Patient_list.php authors Rod Roark and Brady Miller June 2022
- *
+  *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
  * @author    Ruth Moulton <ruth@muswell.me.uk>
