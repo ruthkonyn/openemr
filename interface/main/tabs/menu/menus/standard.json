@@ -1368,6 +1368,18 @@
             ]
           },
           {
+            "label": "Used Codings",
+            "menu_id": "rep0",
+            "target": "rep",
+            "url": "/interface/reports/patient_codes_use.php",
+            "children": [],
+            "requirement": 0,
+            "acl_req": [
+              "patients",
+              "med"
+            ]
+          },
+          {
             "label": "Clinical",
             "menu_id": "rep0",
             "target": "rep",
