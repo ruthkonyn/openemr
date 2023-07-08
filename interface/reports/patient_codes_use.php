@@ -42,11 +42,13 @@ $report_title = xl("List of Patients' Codings");
 
 // In the case of CSV export only, a download will be forced.
 if (!empty($_POST['form_csvexport'])) {
+    $today = text(getdate()['year'] . getdate()['mon'] . getdate() [ 'mday']);
+    $filename = "patients_codings" . "_" . $GLOBALS['openemr_name'] . "_" .  $today . ".csv" ;
     header("Pragma: public");
     header("Expires: 0");
     header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
     header("Content-Type: application/force-download");
-    header("Content-Disposition: attachment; filename=patients_codings.csv");
+    header("Content-Disposition: attachment; filename=" . $filename . '"');
     header("Content-Description: File Transfer");
 } else {
     ?>
