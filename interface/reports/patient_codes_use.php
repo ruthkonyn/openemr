@@ -54,7 +54,6 @@ if (!empty($_POST['form_csvexport'])) {
 <head>
 
 <title><?php echo text($report_title); ?></title>
-
     <?php Header::setupHeader(['datetime-picker', 'report-helper']); ?>
 
 <script>
@@ -195,11 +194,11 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     if ($_POST['form_csvexport']) {
         // CSV headers:
         echo csvEscape(xl('ID')) . ',';
-        echo csvEscape(xl('User')) . ',';
         echo csvEscape(xl('Last{{Name}}')) . ',';
         echo csvEscape(xl('First{{Name}}')) . ',';
         echo csvEscape(xl('Date of Birth')) . ',';
         echo csvEscape(xl('Gender')) . ',';
+         echo csvEscape(xl('User')) . ',';
         echo csvEscape(xl('Date')) . ',';
         echo csvEscape(xl('Coding')) . ',';
         echo csvEscape(xl('Description')) . "\n";
@@ -222,35 +221,22 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     } // end not export
     $totalpts = 0;
     $sqlArrayBind = array();
+
     $query = "SELECT " .
+    "c.user, c.diagnosis, c.title, c.date, " .
     "p.fname, p.mname, p.lname, " .
     "p.pid, p.pubpid, p.DOB, p.sex " .
-    "FROM patient_data AS p ";
-
-    if (!empty($from_date)) {
-        $query .= "JOIN lists AS c ON " .
-        "c.pid = p.pid AND " .
-        "c.date >= ? AND " .
-        "c.date <= ? ";
+    "FROM lists AS c " .
+    "JOIN patient_data AS p " .
+    "ON c.pid = p.pid " ;
+    if (!empty($from_date)) { // only take diagnoses made in the given date range
+        $query .=
+        "AND c.date >= ? " .
+        "AND c.date <= ? " ;
         array_push($sqlArrayBind, $from_date . ' 00:00:00', $to_date . ' 23:59:59');
-     /*   if ($form_provider) {
-            $query .= "AND e.provider_id = ? ";
-            array_push($sqlArrayBind, $form_provider);
-        }
-        */
-    } /* date range specified */
-     else {
-      /*  if ($form_provider) {
-            $query .= "JOIN form_encounter AS e ON " .
-            "e.pid = p.pid AND e.provider_id = ? ";
-            array_push($sqlArrayBind, $form_provider);
-        } else {
-            */
-            $query .= "LEFT OUTER JOIN lists AS c ON " .
-            "c.pid = p.pid ";
-        } /* end no date range */
-
- $res = sqlStatement($query, $sqlArrayBind);
+    }
+    $query .= "ORDER BY p.pid";
+    $res = sqlStatement($query, $sqlArrayBind);
     while ($row = sqlFetchArray($res)) {
         (new SystemLogger())->debug("pid found: ",array($row['pid']));
       /*  $age = '';
@@ -266,38 +252,27 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             $age = intval($ageInMonths / 12);
         }
         */
-        $sqlArrayBind = array();
-        $c_pid = $row['pid'];
-        $sqlArrayBind[] = $c_pid;
-        $cquery = "SELECT " .
-            "user,  diagnosis, title , date " .
-            "FROM lists " .
-            "WHERE pid = ? ";
-        $cres = sqlStatement($cquery, $sqlArrayBind);
-        // get the diagnosed condition codes and description for this patient
-        while ($crow = sqlFetchArray($cres)) {
+
         // get user that logged the diagnosis
         $sqlArrayBind = array();
-        $providerID = $crow['user'];
+        $providerID = $row['user'];
         $sqlArrayBind[] = $providerID;
         $pquery = "SELECT " . "fname, lname FROM users WHERE id = ?";
         $pres = sqlStatement($pquery, $sqlArrayBind);
         $prow = sqlFetchArray($pres);
-(new SystemLogger())->debug("code found: ",array($crow['title']));
         if ($_POST['form_csvexport']) {
             echo csvEscape($row['pubpid']) . ',';
-            echo csvEscape($prow['fname'] . " " . $prow['lname']) . ',';
-            echo csvEscape($row['user']) . ',';
             echo csvEscape($row['lname']) . ',';
             echo csvEscape($row['fname']) . ',';
             echo csvEscape(oeFormatShortDate(substr($row['DOB'], 0, 10))) . ',';
             echo csvEscape($row['sex']) . ',';
+             echo csvEscape($row['user']) . ',';
             // format dates by users preference
             echo csvEscape(oeFormatDateTime($row['date'], "global", false)) . ',';
 
             echo csvEscape($row['diagnosis']) . ',';
             echo csvEscape($row['title']) . "\n";
-        } else {
+        } else { //display on screen
             ?>
         <tr>
             <td>
@@ -313,23 +288,23 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
                 <?php echo text($row['sex']); ?>
             </td>
              <td>
-                <?php echo text($crow['user']); ?>
+                <?php echo text($row['user']); ?>
             </td>
             <td>
-                <?php echo text(oeFormatDateTime($crow['date'], "global", false)) ;?>
+                <?php echo text(oeFormatDateTime($row['date'], "global", false)) ;?>
             </td>
             <td>
-            <?php echo text($crow['diagnosis']); ?>
+            <?php echo text($row['diagnosis']); ?>
             </td>
             <td>
-            <?php echo text($crow['title']); ?>
+            <?php echo text($row['title']); ?>
             </td>
         </tr>
             <?php
         } // end not export
         ++$totalpts;
       } // end while there are coding records for this patient
-    } // end for each patient with a coding record in 'lists'
+  //  } // end for each patient with a coding record in 'lists'
     if (!$_POST['form_csvexport']) {
         ?>
 
