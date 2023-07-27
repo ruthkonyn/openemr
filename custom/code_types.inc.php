@@ -1,6 +1,8 @@
 <?php
 
 /**
+ * add in a new code set RVP ICD10 Summary - a reduced set of codes from ICD10 version 1
+ *
  * Library and data structure to manage Code Types and code type lookups.
  *
  * The data structure is the $code_types array.
@@ -32,6 +34,7 @@
  *             8 for storing codes in external SNOMED (RF2) Clinical Term tables (for future)
  *             9 for storing codes in external SNOMED (RF1) Procedure Term tables
  *             10 for storing codes in external SNOMED (RF2) Procedure Term tables (for future)
+ *             20 for storing codes in external RCPICD10Summary Diagnosis tables
  *  term     - 1 if this code type is used as a clinical term
  *  problem  - 1 if this code type is used as a medical problem
  *  drug     - 1 if this code type is used as a medication
@@ -173,6 +176,9 @@ define_external_table($code_external_tables, 6, 'icd10_pcs_order_code', 'pcs_cod
 define_external_table($code_external_tables, 13, 'valueset', 'code', 'description', 'description', array(), '');
 define_external_table($code_external_tables, 14, 'valueset_oid', 'code', 'description', 'description', array(), '');
 
+// RVP ICD 10 summary
+define_external_table($code_external_tables, 20, 'rvpicd10_codes', 'codeid', 'description', '', array("active=1"),"");
+
 /**
  * This array stores the external table options. See above for $code_types array
  * 'external' attribute  for explanation of the option listings.
@@ -192,7 +198,8 @@ $ct_external_options = array(
   '11' => xl('SNOMED (RF2) Clinical Term'),
   '12' => xl('SNOMED (RF2) Procedure'),
   '13' => xl('CQM (Mixed Types) Value Set'),
-  '14' => xl('CQM OID Value Set')
+  '14' => xl('CQM OID Value Set'),
+  '20' => xl('RVPICD10Summary Diagnosis')
 );
 
 /**
