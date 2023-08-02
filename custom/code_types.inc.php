@@ -56,8 +56,10 @@
 
 use OpenEMR\Events\Codes\ExternalCodesCreatedEvent;
 use Symfony\Component\EventDispatcher\EventDispatcher;
+use OpenEMR\Common\Logging\SystemLogger;
 
 require_once(__DIR__ . "/../library/csv_like_join.php");
+
 
 $code_types = array();
 global $code_types;
@@ -85,6 +87,7 @@ while ($ctrow = sqlFetchArray($ctres)) {
         reset($code_types);
         $GLOBALS['default_search_code_type'] = key($code_types);
     }
+   /* (new SystemLogger())->debug("pid : ",array($row['pid'])); */
 }
 
 /** This array contains metadata describing the arrangement of the external data
