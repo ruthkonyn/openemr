@@ -22,6 +22,8 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Common\Twig\TwigContainer;
 use OpenEMR\Core\Header;
 
+use OpenEMR\Common\Logging\SystemLogger;
+
 if (!AclMain::aclCheckCore('admin', 'super')) {
     echo (new TwigContainer(null, $GLOBALS['kernel']))->getTwig()->render('core/unauthorized.html.twig', ['pageTitle' => xl("Install Code Set")]);
     exit;
@@ -29,6 +31,11 @@ if (!AclMain::aclCheckCore('admin', 'super')) {
 
 $form_replace = !empty($_POST['form_replace']);
 $code_type = empty($_POST['form_code_type']) ? '' : $_POST['form_code_type'];
+
+(new SystemLogger)->debug("_POST is:",  $_POST);
+(new SystemLogger)->debug("_FILES is:", $_FILES);
+/* (new SystemLogger)->debug("code_types array:", $code_types); */
+
 ?>
 <html>
 
@@ -69,12 +76,17 @@ if (!empty($_POST['bn_upload'])) {
 
     $code_type_id = $code_types[$code_type]['id'];
     $tmp_name = $_FILES['form_file']['tmp_name'];
+    $full_path = "../../contrib/" . $_FILES['form_file']['full_path'];
+     $full_path = $_FILES['form_file']['full_path'];
 
     $inscount = 0;
     $repcount = 0;
     $seen_codes = array();
+    /* whether or not it's a zip file   */
+    $zip = $_FILES['from_file']['type'] == 'application/zip' ? TRUE : FALSE ;
 
     if (is_uploaded_file($tmp_name) && $_FILES['form_file']['size']) {
+      if ($zip) {
         $zipin = new ZipArchive();
         $eres = null;
         if ($zipin->open($tmp_name) === true) {
@@ -84,12 +96,20 @@ if (!empty($_POST['bn_upload'])) {
                 // TBD: Expand the following test as other code types are supported.
                 if ($code_type == 'RXCUI' && basename($ename) == 'RXNCONSO.RRF') {
                     $eres = $zipin->getStream($ename);
+                    $zip = TRUE;
                     break;
                 }
+
             }
-        } else {
-            $eres = fopen($tmp_name, 'r');
         }
+      } /* not zip */
+      else {
+
+            $eres = fopen( $full_path, 'r');
+            if (!$eres)
+            (new SystemLogger)->debug("fopen fail - eres: ", array($full_path,$eres));
+        }
+    }
 
         if (empty($eres)) {
             die(xlt('Unable to locate the data in this file.'));
@@ -98,7 +118,6 @@ if (!empty($_POST['bn_upload'])) {
         if ($form_replace) {
             sqlStatement("DELETE FROM codes WHERE code_type = ?", array($code_type_id));
         }
-
 
         // Settings to drastically speed up import with InnoDB
         sqlStatementNoLog("SET autocommit=0");
@@ -147,6 +166,9 @@ if (!empty($_POST['bn_upload'])) {
                 );
                 ++$inscount;
             }
+            else {
+                if ( $code_type == 'RVPICD10SUM') {
+                }
 
             // TBD: Clone/adapt the above for each new code type.
         }
@@ -156,11 +178,11 @@ if (!empty($_POST['bn_upload'])) {
         sqlStatementNoLog("SET autocommit=1");
 
         fclose($eres);
-        $zipin->close();
+        if ($zip) {  $zipin->close(); }
     }
 
     echo "<p class='text-success'>" .
-       xlt('LOAD SUCCESSFUL. Codes inserted') . ": " . text($inscount) . ", " .
+       xlt('LOAD SUCCESSFUL. Codes inserted') . ", Table: " . "codes" . ", record count:"  . text($inscount) . ", " .
        xlt('replaced') . ": " . text($repcount) .
        "</p>\n";
 }
@@ -188,7 +210,7 @@ if (!empty($_POST['bn_upload'])) {
                             <td>
                                 <select name='form_code_type'>
                                     <?php
-                                    foreach (array('RXCUI') as $codetype) {
+                                    foreach (array('RXCUI','RVPICD10') as $codetype) {
                                         echo "    <option value='" . attr($codetype) . "'>" . text($codetype) . "</option>\n";
                                     }
                                     ?>
