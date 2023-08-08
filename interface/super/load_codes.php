@@ -31,6 +31,7 @@ if (!AclMain::aclCheckCore('admin', 'super')) {
 
 $form_replace = !empty($_POST['form_replace']);
 $code_type = empty($_POST['form_code_type']) ? '' : $_POST['form_code_type'];
+global $eres; /* file handle*/
 
 (new SystemLogger)->debug("_POST is:",  $_POST);
 (new SystemLogger)->debug("_FILES is:", $_FILES);
@@ -76,8 +77,9 @@ if (!empty($_POST['bn_upload'])) {
 
     $code_type_id = $code_types[$code_type]['id'];
     $tmp_name = $_FILES['form_file']['tmp_name'];
-    $full_path = "../../contrib/" . $_FILES['form_file']['full_path'];
-     $full_path = $_FILES['form_file']['full_path'];
+
+    $full_path = $GLOBALS['fileroot']. '/contrib/'. strtolower($code_type) . '/' . $_FILES['form_file']['full_path'];
+
 
     $inscount = 0;
     $repcount = 0;
@@ -106,10 +108,12 @@ if (!empty($_POST['bn_upload'])) {
       else {
 
             $eres = fopen( $full_path, 'r');
-            if (!$eres)
-            (new SystemLogger)->debug("fopen fail - eres: ", array($full_path,$eres));
+
+            (new SystemLogger)->debug("fopen : ", array($full_path, sprintf("%u",$eres) ));
+            if (!$eres){
+                die(xlt('Unable to open file ' . $full_path));
+            }
         }
-    }
 
         if (empty($eres)) {
             die(xlt('Unable to locate the data in this file.'));
@@ -122,7 +126,9 @@ if (!empty($_POST['bn_upload'])) {
         // Settings to drastically speed up import with InnoDB
         sqlStatementNoLog("SET autocommit=0");
         sqlStatementNoLog("START TRANSACTION");
+
         while (($line = fgets($eres)) !== false) {
+
             if ($code_type == 'RXCUI') {
                 $a = explode('|', $line);
                 if (count($a) < 18) {
@@ -135,6 +141,17 @@ if (!empty($_POST['bn_upload'])) {
 
                 if ($a[11] != 'RXNORM') {
                     continue;
+                }
+            }
+            else if ( $code_type == 'RVPICD10')
+                /* csv file - <code>:<description> */
+                {
+                     (new SystemLogger)->debug("process line : ", array($line));
+                    $a = explode(':', $line);
+                    if (count($a) >= 3) {
+                        die(xlt('bad record format ' . $line));
+                    continue;
+                    }
                 }
 
                 $code = $a[0];
@@ -157,21 +174,26 @@ if (!empty($_POST['bn_upload'])) {
                               ++$repcount;
                               continue;
                     }
-                }
-
+                } /* end if not to be replaced */
+                   if ($code_type == 'RXCUI') {
                 sqlStatementNoLog(
                     "INSERT INTO codes SET code_type = ?, code = ?, code_text = ?, " .
                     "fee = 0, units = 0",
                     array($code_type_id, $code, $a[14])
                 );
+                   }
+                   else if ($code_type == 'RVPICD10') {
+                         sqlStatementNoLog(
+                    "INSERT INTO codes SET code_type = ?, code = ?, code_text = ?, " .
+                    "fee = 0, units = 0",
+                    array($code_type_id, $code, $a[1])
+                );
+                   }
                 ++$inscount;
-            }
-            else {
-                if ( $code_type == 'RVPICD10SUM') {
-                }
 
             // TBD: Clone/adapt the above for each new code type.
-        }
+
+        } /* while lines to read */
 
         // Settings to drastically speed up import with InnoDB
         sqlStatementNoLog("COMMIT");
@@ -179,7 +201,9 @@ if (!empty($_POST['bn_upload'])) {
 
         fclose($eres);
         if ($zip) {  $zipin->close(); }
+
     }
+
 
     echo "<p class='text-success'>" .
        xlt('LOAD SUCCESSFUL. Codes inserted') . ", Table: " . "codes" . ", record count:"  . text($inscount) . ", " .
@@ -210,7 +234,7 @@ if (!empty($_POST['bn_upload'])) {
                             <td>
                                 <select name='form_code_type'>
                                     <?php
-                                    foreach (array('RXCUI','RVPICD10') as $codetype) {
+                                    foreach (array('RVPICD10','RXCUI') as $codetype) {
                                         echo "    <option value='" . attr($codetype) . "'>" . text($codetype) . "</option>\n";
                                     }
                                     ?>
