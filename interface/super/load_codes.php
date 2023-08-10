@@ -4,10 +4,10 @@
  * Upload and install a designated code set to the codes table.
  * used from 'admin/coding/native data loads'
  *
- * added code set RVPICD10 Summary.
- * version 1.0
+ * added code set ICD10_RVP Summary.
+ * version 1.1
  *
- * code sets themselves must be in a folder contrib/<code set name in lower case>, e.g. contrib/rvpicd10
+ * code sets themselves are loaded from client system, can be stored in a folder contrib/<code set name in lower case>, e.g. contrib/icd10_rvp
  *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
@@ -151,7 +151,7 @@ if (!empty($_POST['bn_upload'])) {
                     continue;
                 }
             }
-            else if ( $code_type == 'RVPICD10')
+            else if ( $code_type == 'ICD10_RVP')
                 /* csv file - <code>:<description> */
                 {
                     $a = explode(':', $line);
@@ -189,7 +189,7 @@ if (!empty($_POST['bn_upload'])) {
                     array($code_type_id, $code, $a[14])
                 );
                    }
-                   else if ($code_type == 'RVPICD10') {
+                   else if ($code_type == 'ICD10_RVP') {
                          sqlStatementNoLog(
                     "INSERT INTO codes SET code_type = ?, code = ?, code_text = ?, " .
                     "fee = 0, units = 0",
@@ -241,7 +241,7 @@ if (!empty($_POST['bn_upload'])) {
                             <td>
                                 <select name='form_code_type'>
                                     <?php
-                                    foreach (array('RVPICD10','RXCUI') as $codetype) {
+                                    foreach (array('ICD10_RVP','RXCUI') as $codetype) {
                                         echo "    <option value='" . attr($codetype) . "'>" . text($codetype) . "</option>\n";
                                     }
                                     ?>
