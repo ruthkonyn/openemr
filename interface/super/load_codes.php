@@ -2,11 +2,18 @@
 
 /**
  * Upload and install a designated code set to the codes table.
+ * used from 'admin/coding/native data loads'
+ *
+ * added code set RVPICD10 Summary.
+ * version 1.0
+ *
+ * code sets themselves must be in a folder contrib/<code set name in lower case>, e.g. contrib/rvpicd10
  *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
  * @author    Rod Roark <rod@sunsetsystems.com>
  * @author    Brady Miller <brady.g.miller@gmail.com>
+ * @author    ruth moulton <ruth@muswell.me.uk>
  * @copyright Copyright (c) 2014 Rod Roark <rod@sunsetsystems.com>
  * @copyright Copyright (c) 2018 Brady Miller <brady.g.miller@gmail.com>
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
@@ -35,6 +42,7 @@ global $eres; /* file handle*/
 
 (new SystemLogger)->debug("_POST is:",  $_POST);
 (new SystemLogger)->debug("_FILES is:", $_FILES);
+
 /* (new SystemLogger)->debug("code_types array:", $code_types); */
 
 ?>
@@ -64,6 +72,7 @@ global $eres; /* file handle*/
 <body class="body_top">
 
 <?php
+
 // Handle uploads.
 if (!empty($_POST['bn_upload'])) {
     //verify csrf
@@ -78,19 +87,21 @@ if (!empty($_POST['bn_upload'])) {
     $code_type_id = $code_types[$code_type]['id'];
     $tmp_name = $_FILES['form_file']['tmp_name'];
 
-    $full_path = $GLOBALS['fileroot']. '/contrib/'. strtolower($code_type) . '/' . $_FILES['form_file']['full_path'];
-
+    $full_path = $GLOBALS['fileroot']. '/contrib/'. strtolower($code_type) ;
 
     $inscount = 0;
     $repcount = 0;
     $seen_codes = array();
+
     /* whether or not it's a zip file   */
-    $zip = $_FILES['from_file']['type'] == 'application/zip' ? TRUE : FALSE ;
+    $zip = $_FILES['form_file']['type'] == 'application/zip' ? TRUE : FALSE ;
+    $csv = $_FILES['form_file']['type'] == 'text/csv' ? TRUE : FALSE ;
+    $eres = null;
 
     if (is_uploaded_file($tmp_name) && $_FILES['form_file']['size']) {
       if ($zip) {
         $zipin = new ZipArchive();
-        $eres = null;
+
         if ($zipin->open($tmp_name) === true) {
             // Must be a zip archive.
             for ($i = 0; $i < $zipin->numFiles; ++$i) {
@@ -101,17 +112,14 @@ if (!empty($_POST['bn_upload'])) {
                     $zip = TRUE;
                     break;
                 }
-
             }
         }
       } /* not zip */
-      else {
+      else if ($csv) {
+            $eres = fopen( $tmp_name, 'r');
 
-            $eres = fopen( $full_path, 'r');
-
-            (new SystemLogger)->debug("fopen : ", array($full_path, sprintf("%u",$eres) ));
             if (!$eres){
-                die(xlt('Unable to open file ' . $full_path));
+                die(xlt('Unable to open file ' . $_FILES['form_file']['name'] . " from: " . $tmp_name ));
             }
         }
 
@@ -146,7 +154,6 @@ if (!empty($_POST['bn_upload'])) {
             else if ( $code_type == 'RVPICD10')
                 /* csv file - <code>:<description> */
                 {
-                     (new SystemLogger)->debug("process line : ", array($line));
                     $a = explode(':', $line);
                     if (count($a) >= 3) {
                         die(xlt('bad record format ' . $line));
@@ -243,7 +250,7 @@ if (!empty($_POST['bn_upload'])) {
                         </tr>
                         <tr>
                             <td class="detail">
-                                <?php echo xlt('Source File'); ?>
+                                <?php echo xlt('Source File '); ?>
                                 <input type="hidden" name="MAX_FILE_SIZE" value="350000000" />
                             </td>
                             <td class="detail">
