@@ -7,6 +7,8 @@
  * added code set ICD10_RVP Summary.
  * version 1.2
  * change name to ICD10-HSE
+ * version 1.3
+ * take out unused 'full_path' variable
  *
  *
  * code sets themselves are loaded from client system, can be stored in a folder contrib/<code set name in lower case>, e.g. contrib/icd10-hse
@@ -88,9 +90,6 @@ if (!empty($_POST['bn_upload'])) {
 
     $code_type_id = $code_types[$code_type]['id'];
     $tmp_name = $_FILES['form_file']['tmp_name'];
-
-    $full_path = $GLOBALS['fileroot']. '/contrib/'. strtolower($code_type) ;
-
     $inscount = 0;
     $repcount = 0;
     $seen_codes = array();
