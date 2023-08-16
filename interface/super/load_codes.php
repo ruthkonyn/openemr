@@ -251,7 +251,7 @@ if (!empty($_POST['bn_upload'])) {
                         </tr>
                         <tr>
                             <td class="detail">
-                                <?php echo xlt('Source File '); ?>
+                                <?php echo xlt('Source File'); ?>
                                 <input type="hidden" name="MAX_FILE_SIZE" value="350000000" />
                             </td>
                             <td class="detail">
