@@ -3,6 +3,10 @@
 /**
  * add or edit a medical problem.
  *
+ * * Ruth Moulton
+ * new issue form type 'Problem' added with reduced number of items displayed
+ * version 1.0
+ *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
  * @author    Rod Roark <rod@sunsetsystems.com>
@@ -26,6 +30,7 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Core\Header;
 use OpenEMR\MedicalDevice\MedicalDevice;
 use OpenEMR\Services\PatientIssuesService;
+use OpenEMR\Common\Logging\SystemLogger;
 
 // TBD - Resolve functional issues if opener is included in Header
 ?>
@@ -329,7 +334,7 @@ if (!empty($_POST['form_save'])) {
 
     echo "</script></body></html>\n";
     exit();
-}
+} /* end of 'if we are saving' */
 
 $irow = array();
 if ($issue) {
@@ -399,6 +404,7 @@ function getCodeText($code)
     <?php
     $i = 0;
     foreach ($ISSUE_TYPES as $key => $value) {
+          /* record style: 0 standard, 1 simplified, 2 football injury, 5 Problem*/
         echo " aitypes[" . attr($i) . "] = " . js_escape($value[3]) . ";\n";
         echo " aopts[" . attr($i) . "] = new Array();\n";
         $qry = sqlStatement(
@@ -474,6 +480,7 @@ function getCodeText($code)
             var revdisp = (aitypes[index] == 1) ? '' : 'none';
             var injdisp = (aitypes[index] == 2) ? '' : 'none';
             var nordisp = (aitypes[index] == 0) ? '' : 'none';
+            var pdisp   = (aitypes[index] == 5) ? 'none' : '';
             // reaction row should be displayed only for medication allergy.
             var alldisp = (index == <?php echo issueTypeIndex('allergy'); ?>) ? '' : 'none';
             var verificationdisp = (index == <?php echo issueTypeIndex('medical_problem'); ?>) ||
@@ -490,9 +497,12 @@ function getCodeText($code)
             document.getElementById('row_severity').style.display = alldisp;
             document.getElementById('row_reaction').style.display = alldisp;
             document.getElementById('row_verification').style.display = verificationdisp;
-            document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : comdisp;
-            //document.getElementById('row_comments'      ).style.display = (f.form_comments.value) ? '' : revdisp;
-            document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : comdisp;
+            var  disp = (comdisp == 'none' || pdisp == 'none') ? 'none' : '';
+           // document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : comdisp;
+            document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : disp;
+            document.getElementById('row_destination').style.display = pdisp;
+            document.getElementById('select-code-for-title').style.display = pdisp;
+            document.getElementById('expanded_options').className = (pdisp == 'none' ) ? '' : 'collapse' ;
         });
         <?php
         if (!empty($ISSUE_TYPES['ippf_gcac']) && empty($_POST['form_save'])) {
@@ -506,7 +516,7 @@ function getCodeText($code)
             }
         }
         ?>
-    }
+    } /* end of new type */
 
     // If a clickoption title is selected, copy it to the title field.
     // If it has a code, add that too.
@@ -802,6 +812,7 @@ function getCodeText($code)
                                     <label><?php echo xlt('Type'); ?>:</label>
                                     <?php
                                     $index = 0;
+                                     /* display radio button for each active issue type, if needed */
                                     foreach ($ISSUE_TYPES as $key => $value) {
                                         if ($issue || $thistype) {
                                             if ($index == $type_index) {
@@ -813,6 +824,7 @@ function getCodeText($code)
                                             $disabled = (!AclMain::aclCheckIssue($key, '', ['write', 'addonly'])) ? " disabled" : '';
                                             $str = '<input type="radio" name="form_type" value="%s" onclick="newtype(%s)" %s %s>';
                                             echo vsprintf($str, [attr($index), attr_js($index), $checked, $disabled]);
+                                            echo text($value[1]); /* rm - display issue type name */
                                         }
 
                                         ++$index;
@@ -896,7 +908,7 @@ function getCodeText($code)
                                 <textarea class="form-control" name='form_comments' id='form_comments' rows="2" id='form_comments'><?php echo text($irow['comments'] ?? '') ?></textarea>
                             </div>
                         </div>
-                        <div id="expanded_options" class="collapse">
+                        <div id="expanded_options" >
                             <div class="row">
                                 <div class="form-group col-sm-12 col-md-6" id='row_active_codes'>
                                     <label for="form_active_codes" class="col-form-label"><?php echo xlt('Active Issue Codes'); ?>:</label>
