@@ -9,6 +9,8 @@
  * change name to ICD10-HSE
  * version 1.3
  * take out unused 'full_path' variable
+ * version 1.4
+ * change name to ICD10-HC-CHO7
  *
  *
  * code sets themselves are loaded from client system, can be stored in a folder contrib/<code set name in lower case>, e.g. contrib/icd10-hse
@@ -152,7 +154,7 @@ if (!empty($_POST['bn_upload'])) {
                     continue;
                 }
             }
-            else if ( $code_type == 'ICD10-HSE')
+            else if ( $code_type == 'ICD10-HC-CHO7')
                 /* csv file - <code>:<description> */
                 {
                     $a = explode(':', $line);
@@ -190,7 +192,7 @@ if (!empty($_POST['bn_upload'])) {
                     array($code_type_id, $code, $a[14])
                 );
                    }
-                   else if ($code_type == 'ICD10-HSE') {
+                   else if ($code_type == 'ICD10-HC-CHO7') {
                          sqlStatementNoLog(
                     "INSERT INTO codes SET code_type = ?, code = ?, code_text = ?, " .
                     "fee = 0, units = 0",
@@ -242,7 +244,7 @@ if (!empty($_POST['bn_upload'])) {
                             <td>
                                 <select name='form_code_type'>
                                     <?php
-                                    foreach (array('ICD10-HSE','RXCUI') as $codetype) {
+                                    foreach (array('ICD10-HC-CHO7','RXCUI') as $codetype) {
                                         echo "    <option value='" . attr($codetype) . "'>" . text($codetype) . "</option>\n";
                                     }
                                     ?>
