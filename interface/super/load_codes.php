@@ -11,6 +11,8 @@
  * take out unused 'full_path' variable
  * version 1.4
  * change name to ICD10-HC-CHO7
+ * version 1.5
+ * use '%' as delimeter for ICD10-HC-CH07 csv file
  *
  *
  * code sets themselves are loaded from client system, can be stored in a folder contrib/<code set name in lower case>, e.g. contrib/icd10-hse
@@ -157,7 +159,7 @@ if (!empty($_POST['bn_upload'])) {
             else if ( $code_type == 'ICD10-HC-CHO7')
                 /* csv file - <code>:<description> */
                 {
-                    $a = explode(':', $line);
+                    $a = explode('%', $line);
                     if (count($a) >= 3) {
                         die(xlt('bad record format ' . $line));
                     continue;
