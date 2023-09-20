@@ -1326,6 +1326,17 @@
               "patients",
               "demo"
             ]
+          },{
+            "label": "Diagnostic Code Use",
+            "menu_id": "rep0",
+            "target": "rep",
+            "url": "/interface/reports/diagnostic_code_use.php",
+            "children": [],
+            "requirement": 0,
+            "acl_req": [
+              "patients",
+              "demo"
+            ]
           },
           {
             "label": "Rx",
