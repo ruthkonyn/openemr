@@ -36,7 +36,12 @@ $to_date    = (!empty($_POST['form_to_date'])) ? DateToYYYYMMDD($_POST['form_to_
 $form_provider = empty($_POST['form_provider']) ? 0 : intval($_POST['form_provider']);
 $form_gender = empty($_POST['form_gender']) ? 0 : intval($_POST['form_gender']);
 
+$form_code = empty($_POST['form_code']) ? 0 : intval($_POST['form_code']);
+
+$form_age_range = empty($_POST['form_age_range']) ? 0 : intval($_POST['form_age_range']);
+
 $report_title = xl("Diagnostic Code Use"); // This invokes the find-code popup.
+
 
 $url;
 
@@ -45,40 +50,13 @@ $url;
  function onAddCode() {
             <?php
             $url = '../patient_file/encounter/select_codes.php?codetype=';
-            if (!empty($irow['type']) && ($irow['type'] == 'medical_problem')) {
-                $url .= urlencode(collect_codetypes("medical_problem", "csv"));
-            } else {
-                $url .= urlencode(collect_codetypes("diagnosis", "csv"));
-                $tmp_csv = collect_codetypes("drug", "csv");
-                $tmp_csv .= "," . collect_codetypes("clinical_term", "csv");
-                $tmp = explode(",", $tmp_csv);
-                if (!empty($irow['type']) && ($irow['type'] == 'allergy')) {
-                    if ($tmp) {
-                        foreach ($tmp as $item) {
-                            $pos = strpos($url, $item);
-                            if ($pos === false) {
-                                $item = urlencode($item);
-                                $url .= ",$item";
-                            }
-                        }
-                    }
-                } elseif (!empty($irow['type']) && ($irow['type'] == 'medication')) {
-                    if ($tmp) {
-                        foreach ($tmp as $item) {
-                            $pos = strpos($url, $item);
-                            if ($pos === false) {
-                                $item = urlencode($item);
-                                $url .= ",$item&default=$item";
-                            }
-                        }
-                    }
-                }
-            }
+
             ?>
             dlgopen(<?php echo js_escape($url); ?>, '_blank', 985, 800, '', <?php echo xlj("Select Codes"); ?>);
         }
+
         // call back for select_codes
-        function OnCodeSelected(codetype, code, selector, codedesc) {
+ function OnCodeSelected(codetype, code, selector, codedesc) {
             var codeKey = codetype + ':' + code
             addSelectedCode(codeKey, codeKey + ' (' + codedesc + ')')
 
@@ -86,6 +64,8 @@ $url;
             if (f.form_title.value == '') {
                 f.form_title.value = codedesc;
             }
+           $.post('', {form_code: "send code" });
+           //<?php $form_code = $code; ?>
         }
 
 </script>
@@ -221,7 +201,7 @@ $(function () {
             </td>
             <td>
 
-                <select name="age range" id="age_range">
+                <select name="form_age_range" id="from_age_range">
                     <option value="1"> 30 or under</option>
                     <option value="2">31-40</option>
                     <option value="3">41-50</option>
@@ -293,8 +273,10 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
   <table class='table' id='mymaintable'>
    <thead class='thead-light'>
     <th> <?php echo xlt('ID'); ?> </th>
+     <th> <?php echo xlt('Encounter Date'); ?> </th>
     <th> <?php echo xlt('Encounter Provider'); ?> </th>
     <th> <?php echo xlt('Patient'); ?> </th>
+    <th> <?php echo xlt('Date of Birth'); ?> </th>
      <th> <?php echo xlt('Gender'); ?> </th>
      <th> <?php echo xlt('Code'); ?> </th>
      <th> <?php echo xlt('Description'); ?> </th>
@@ -308,9 +290,9 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     $query = "SELECT " .
     "p.fname, p.mname, p.lname, " .
     "p.pid, p.pubpid, p.DOB, p.sex, " .
-    "count(e.date) AS ecount, max(e.date) AS edate, " .
-    "i1.date AS idate1, i2.date AS idate2, " .
-    "c1.name AS cname1, c2.name AS cname2 " .
+    "count(e.date) AS ecount, max(e.date) AS edate " .
+   // "i1.date AS idate1, i2.date AS idate2, " .
+   // "c1.name AS cname1, c2.name AS cname2 " .
     "FROM patient_data AS p ";
 
     if (!empty($from_date)) {
@@ -335,16 +317,18 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     }
 
     $query .=
-    "LEFT OUTER JOIN insurance_data AS i1 ON " .
-    "i1.pid = p.pid AND i1.type = 'primary' " .
-    "LEFT OUTER JOIN insurance_companies AS c1 ON " .
-    "c1.id = i1.provider " .
-    "LEFT OUTER JOIN insurance_data AS i2 ON " .
-    "i2.pid = p.pid AND i2.type = 'secondary' " .
-    "LEFT OUTER JOIN insurance_companies AS c2 ON " .
-    "c2.id = i2.provider " .
-    "GROUP BY p.lname, p.fname, p.mname, p.pid, i1.date, i2.date " .
-    "ORDER BY p.lname, p.fname, p.mname, p.pid, i1.date DESC, i2.date DESC";
+ //   "LEFT OUTER JOIN insurance_data AS i1 ON " .
+ //   "i1.pid = p.pid AND i1.type = 'primary' " .
+//    "LEFT OUTER JOIN insurance_companies AS c1 ON " .
+ //   "c1.id = i1.provider " .
+  //  "LEFT OUTER JOIN insurance_data AS i2 ON " .
+ //   "i2.pid = p.pid AND i2.type = 'secondary' " .
+ //   "LEFT OUTER JOIN insurance_companies AS c2 ON " .
+ //   "c2.id = i2.provider " .
+  //  "GROUP BY p.lname, p.fname, p.mname, p.pid, i1.date, i2.date " .
+  //  "ORDER BY p.lname, p.fname, p.mname, p.pid, i1.date DESC, i2.date DESC";
+   "GROUP BY p.lname, p.fname, p.mname, p.pid " .
+    "ORDER BY p.lname, p.fname, p.mname, p.pid";
     $res = sqlStatement($query, $sqlArrayBind);
 
     $prevpid = 0;
@@ -408,9 +392,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             <td>
                 <?php echo text(oeFormatDateTime($row['edate'], "global", false)) ;?>
             </td>
-            <td>
-                <?php echo text($erow['facility']); ?>
-            </td>
+
             <td>
                  <?php echo text($prow['fname'] . ' ' . $prow['lname']); ?>
             </td>
@@ -422,6 +404,9 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             </td>
             <td>
             <?php echo text($row['sex']); ?>
+            </td>
+             <td>
+                <?php echo text("code is".$form_code); ?>
             </td>
             <td>
             <?php echo text($erow['reason']); ?>
