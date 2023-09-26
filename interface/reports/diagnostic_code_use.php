@@ -16,6 +16,9 @@
  * @copyright Copyright (c) 2017-2018 Brady Miller <brady.g.miller@gmail.com>
  * @license   https://github.com/openemr/openemr/blob/master/LICENSE GNU General Public License 3
  */
+/*
+ * 'lists' table in db holds info about medical issues per patient
+ */
 
 require_once("../globals.php");
 require_once("$srcdir/patient.inc");
@@ -23,6 +26,7 @@ require_once("$srcdir/options.inc.php");
 
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Core\Header;
+use OpenEMR\Common\Logging\SystemLogger;
 
 if (!empty($_POST)) {
     if (!CsrfUtils::verifyCsrfToken($_POST["csrf_token_form"])) {
@@ -34,39 +38,63 @@ $from_date  = (!empty($_POST['form_from_date'])) ? DateToYYYYMMDD($_POST['form_f
 $to_date    = (!empty($_POST['form_to_date'])) ? DateToYYYYMMDD($_POST['form_to_date']) : date('Y-m-d');
 
 $form_provider = empty($_POST['form_provider']) ? 0 : intval($_POST['form_provider']);
-$form_gender = empty($_POST['form_gender']) ? 0 : intval($_POST['form_gender']);
+$form_gender = empty($_POST['form_sex']) ? 0 : text($_POST['form_sex']);
 
-$form_code = empty($_POST['form_code']) ? 0 : intval($_POST['form_code']);
+$form_code = empty($_POST['form_code']) ? 0 : text($_POST['form_code']);
+$form_code_description = empty($_POST['form_code_description']) ? 'no description' : text($_POST['form_code_description']);
 
 $form_age_range = empty($_POST['form_age_range']) ? 0 : intval($_POST['form_age_range']);
 
-$report_title = xl("Diagnostic Code Use"); // This invokes the find-code popup.
+$report_title = xl("Diagnostic Code Use");
 
+// address for find code pop up
+$url = '';
 
-$url;
+(new SystemLogger())->debug("lets go: ",array( $form_gender, $form_age_range, $from_Date, $to_date, $form_code ));
 
 ?>
 <script>
- function onAddCode() {
+
+function selectCodes(msg) {
+   // alert("in select codes" + msg);
+
             <?php
             $url = '../patient_file/encounter/select_codes.php?codetype=';
 
             ?>
-            dlgopen(<?php echo js_escape($url); ?>, '_blank', 985, 800, '', <?php echo xlj("Select Codes"); ?>);
+            dlgopen(<?php echo js_escape($url); ?>, '_blank', 985, 800, '', <?php echo xlj("Select Codes"); ?> )
         }
 
-        // call back for select_codes
+ // call back for select_codes
  function OnCodeSelected(codetype, code, selector, codedesc) {
             var codeKey = codetype + ':' + code
-            addSelectedCode(codeKey, codeKey + ' (' + codedesc + ')')
-
+ alert(code + " " + codedesc)
             var f = document.forms[0]
-            if (f.form_title.value == '') {
-                f.form_title.value = codedesc;
-            }
-           $.post('', {form_code: "send code" });
-           //<?php $form_code = $code; ?>
-        }
+        //    if (f.form_title.value == '') {
+        //        f.form_title.value = codedesc;
+         //   }
+            let data = new FormData();
+ //   for (i = 0; i<f.length; i++){
+ //       data.append(f[i].name, f[i].value);
+ //   }
+         //   $_POST['form_code'] = "123test";
+    data.append("form_code", code);
+    data.append("form_code_description",codedesc);
+    fetch('#',
+        {method: "POST",
+            body: data
+        })
+    .then (response => response.text())
+    .then ( (response) =>
+            {
+                document.body.innerHTML = response;
+            });
+   // alert("post response " + .then(response) );
+   f.submit();
+  //  dlgclose();
+    }
+
+
 
 </script>
 <?php
@@ -193,7 +221,7 @@ $(function () {
             </td>
             <td>
                 <?php
-                generate_form_field(array('data_type' => 43, 'list_id' => 'sex', 'field_id' => 'sex', 'option' => 'female', 'empty_title' => '-both-', 'description' => 'patient gender'), ($_POST['form_gender'] ?? ''));
+                generate_form_field(array('data_type' => 1, 'list_id' => 'sex', 'field_id' => 'sex', 'empty_title' => 'Any', 'description' => 'patient gender'), ($_POST['form_sex'] ?? ''));
                 ?>
             </td>
              <td class='col-form-label'>
@@ -201,7 +229,7 @@ $(function () {
             </td>
             <td>
 
-                <select name="form_age_range" id="from_age_range">
+                <select name="form_age_range" id="form_age_range">
                     <option value="1"> 30 or under</option>
                     <option value="2">31-40</option>
                     <option value="3">41-50</option>
@@ -216,8 +244,11 @@ $(function () {
                 <?php echo xlt('Codes'); ?>:
             </td>
              <td>
-                <button type="button"  style="margin-right:5px;" onclick='onAddCode()'><?php echo xlt('select codes');?></button>
+              <div class="btn-group" role="group">
+                <a href='#' class='btn btn-secondary' style="margin-right:5px;" onclick='selectCodes();'> <?php echo xlt('select codes');?>  </a>
+                </div>
             </td>
+
         </tr>
     </table>
 
@@ -234,7 +265,7 @@ $(function () {
                         <?php echo xlt('Submit'); ?>
                     </a>
                     <?php if (!empty($_POST['form_refresh'])) { ?>
-                    <a href='#' class='btn btn-secondary btn-transmit' onclick='$("#form_csvexport").attr("value","true"); $("#theform").submit();'>
+                    <a href='#' class='btn btn-secondary btn-transmit' onclick='$("#form_csvexport").attr("value","true");  alert(<?php echo xlj('The destination form was closed.'); ?>);'>
                         <?php echo xlt('Export to CSV'); ?>
                     </a>
                       <a href='#' id='printbutton' class='btn btn-secondary btn-print'>
@@ -273,8 +304,8 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
   <table class='table' id='mymaintable'>
    <thead class='thead-light'>
     <th> <?php echo xlt('ID'); ?> </th>
-     <th> <?php echo xlt('Encounter Date'); ?> </th>
-    <th> <?php echo xlt('Encounter Provider'); ?> </th>
+     <th> <?php echo xlt('Issue Date'); ?> </th>
+    <th> <?php echo xlt('Issue Provider'); ?> </th>
     <th> <?php echo xlt('Patient'); ?> </th>
     <th> <?php echo xlt('Date of Birth'); ?> </th>
      <th> <?php echo xlt('Gender'); ?> </th>
@@ -289,50 +320,49 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     $sqlArrayBind = array();
     $query = "SELECT " .
     "p.fname, p.mname, p.lname, " .
-    "p.pid, p.pubpid, p.DOB, p.sex, " .
-    "count(e.date) AS ecount, max(e.date) AS edate " .
+   // "p.pid, p.pubpid, p.DOB, p.sex, " .
+    "p.pid, p.pubpid, p.DOB, p.sex " .
+   //  .   "count(l.date) AS lcount, max(l.date) AS ldate " .
    // "i1.date AS idate1, i2.date AS idate2, " .
    // "c1.name AS cname1, c2.name AS cname2 " .
-    "FROM patient_data AS p ";
+    "FROM patient_data AS p " ;
 
-    if (!empty($from_date)) {
-        $query .= "JOIN form_encounter AS e ON " .
-        "e.pid = p.pid AND " .
-        "e.date >= ? AND " .
-        "e.date <= ? ";
-        array_push($sqlArrayBind, $from_date . ' 00:00:00', $to_date . ' 23:59:59');
-        if ($form_provider) {
-            $query .= "AND e.provider_id = ? ";
-            array_push($sqlArrayBind, $form_provider);
-        }
-    } else {
-        if ($form_provider) {
-            $query .= "JOIN form_encounter AS e ON " .
-            "e.pid = p.pid AND e.provider_id = ? ";
-            array_push($sqlArrayBind, $form_provider);
-        } else {
-            $query .= "LEFT OUTER JOIN form_encounter AS e ON " .
-            "e.pid = p.pid ";
-        }
+    // can asign a medical problem directly from demographic, or else from an encounter. i think 'provider' is only recorded in an encounter
+    // so only display if medical issue is in both 'lists' and and encounter - match by date perhaps?
+  //  if (!empty($from_date)) {
+    //    $query .= "JOIN lists AS l ON " .
+    //    "l.pid = p.pid AND " .
+    //    "l.date >= ? AND " .
+     //   "l.date <= ? ";
+    //    array_push($sqlArrayBind, $from_date . ' 00:00:00', $to_date . ' 23:59:59');
+        // lists has field 'user', but not 'provider'
+     //   if ($form_provider) {
+   //         $query .= "AND l.user = ? ";
+      //      array_push($sqlArrayBind, $form_provider);
+     //   }
+  //  } else {
+    //    if ($form_provider) {
+ //           $query .= "JOIN lists AS l ON " .
+ //           "l.pid = p.pid AND e.provider_id = ? ";
+ //           array_push($sqlArrayBind, $form_provider);
+   //     } else {
+  //          $query .= "LEFT OUTER JOIN lists AS l ON " .
+  //          "l.pid = p.pid ";
+      //  }
+  //  }
+    if ($form_gender != 'Any'){
+          array_push($sqlArrayBind, $form_gender);
+         $query .= "WHERE p.sex =? " ;
     }
 
-    $query .=
- //   "LEFT OUTER JOIN insurance_data AS i1 ON " .
- //   "i1.pid = p.pid AND i1.type = 'primary' " .
-//    "LEFT OUTER JOIN insurance_companies AS c1 ON " .
- //   "c1.id = i1.provider " .
-  //  "LEFT OUTER JOIN insurance_data AS i2 ON " .
- //   "i2.pid = p.pid AND i2.type = 'secondary' " .
- //   "LEFT OUTER JOIN insurance_companies AS c2 ON " .
- //   "c2.id = i2.provider " .
-  //  "GROUP BY p.lname, p.fname, p.mname, p.pid, i1.date, i2.date " .
-  //  "ORDER BY p.lname, p.fname, p.mname, p.pid, i1.date DESC, i2.date DESC";
-   "GROUP BY p.lname, p.fname, p.mname, p.pid " .
-    "ORDER BY p.lname, p.fname, p.mname, p.pid";
+   (new SystemLogger())->debug("diag Query: ",array( $query ));
     $res = sqlStatement($query, $sqlArrayBind);
 
     $prevpid = 0;
     while ($row = sqlFetchArray($res)) {
+
+        (new SystemLogger())->debug("query res pid: ",$row );
+
         if ($row['pid'] == $prevpid) {
             continue;
         }
@@ -340,7 +370,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
         $age = '';
         if (!empty($row['DOB'])) {
             $dob = $row['DOB'];
-            $tdy = $row['edate'] ? $row['edate'] : date('Y-m-d');
+            $tdy = $row['ldate'] ? $row['ldate'] : date('Y-m-d');
             $ageInMonths = (substr($tdy, 0, 4) * 12) + substr($tdy, 5, 2) -
                    (substr($dob, 0, 4) * 12) - substr($dob, 5, 2);
             $dayDiff = substr($tdy, 8, 2) - substr($dob, 8, 2);
@@ -358,12 +388,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             "FROM form_encounter " .
             "WHERE pid = ? ";
         $eres = sqlStatement($equery, $sqlArrayBind);
-        // get encounter on the most recent date
-        while ($erow = sqlFetchArray($eres)) {
-            if ($erow['date'] == $row['edate']) {
-                break;
-            }
-        }
+
         // get provider name
         $sqlArrayBind = array();
         $providerID = $erow['provider_id'];
@@ -406,8 +431,11 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             <?php echo text($row['sex']); ?>
             </td>
              <td>
-                <?php echo text("code is".$form_code); ?>
+                <?php echo text("code is ".$form_code); ?>
+            </td> <td>
+                <?php echo text("$form_code_description"); ?>
             </td>
+
             <td>
             <?php echo text($erow['reason']); ?>
             </td>
