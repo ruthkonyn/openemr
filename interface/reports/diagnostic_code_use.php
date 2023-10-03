@@ -40,8 +40,8 @@ $to_date    = (!empty($_POST['form_to_date'])) ? DateToYYYYMMDD($_POST['form_to_
 $form_provider = empty($_POST['form_provider']) ? 0 : intval($_POST['form_provider']);
 $form_gender = empty($_POST['form_sex']) ? 0 : text($_POST['form_sex']);
 
-$form_code = empty($_POST['form_code']) ? 0 : $_POST['form_code'];
-$form_code_description = empty($_POST['form_code_description']) ? 'no description' : text($_POST['form_code_description']);
+$form_codes = empty($_POST['form_codes']) ? 0 : $_POST['form_codes'];
+$form_code_types = empty($_POST['form_code_types']) ? 'no description' : $_POST['form_code_types'];
 
 $form_age_range = empty($_POST['form_age_range']) ? 0 : intval($_POST['form_age_range']);
 
@@ -50,66 +50,48 @@ $report_title = xl("Diagnostic Code Use");
 // address for find code pop up
 $url = '';
 
-(new SystemLogger())->debug("lets go: ",array( $form_gender, $form_age_range, $from_Date, $to_date, $form_code, $form_code_description ));
+(new SystemLogger())->debug("lets go: ",array( $form_gender, $form_age_range, $from_Date, $to_date, $form_codes, $form_code_description ));
+
+if (empty($_POST['form_csvexport'])) {
 
 ?>
 <script>
 
-function selectCodes(msg) {
-   // alert("in select codes" + msg);
+function selectCodes() {
+   // alert("in select codes" );
             <?php
             $url = '../patient_file/encounter/select_codes.php?codetype=';
             ?>
             dlgopen(<?php echo js_escape($url); ?>, '_blank', 985, 800, '', <?php echo xlj("Select Codes"); ?> )
  }
 
+ var form_code_list = [];
+ var form_code_type_list = []
+
  // call back for select_codes
  function OnCodeSelected(codetype, code, selector, codedesc) {
-       var codeKey = codetype + ':' + code
- alert(code + " " + codedesc)
+ //   alert(codetype + " " + code + " " + selector + " " + codedesc)
        var f = document.forms[0]
 
-     //    f['form_code'] = ('form_code',code)
-        f['form_code'].value = code
-        f['form_code_description'].value = codedesc
-
-        let data = new FormData();
-alert("f.length " + f.length)
-     //   for (i = 0; i<f.length; i++){
-     //       data.append(f[i].name, f[i].value);
-
-     //       alert(f[i].name + " " + f[i].value)
-      //  }
-
-     //  data.append("form_code", code);
-   //    data.append("form_code_description",codedesc);
-
-    //    fetch('#',
-     //       {method: "POST",
-    //            body: data
-    //        })
-     //   .then (response => response.text())
-    //    .then ( (response) =>
-     //       {
-     //           document.body.innerHTML = response;
-     //       });
-
-    //    f.submit();
-  //  dlgclose();
+       form_code_list.push(code)
+        form_code_type_list.push(codetype)
+       f['form_codes'].value = form_code_list
+       f['form_code_types'].value = form_code_type_list
     }
-
-
 
 </script>
 <?php
-
+}
 // In the case of CSV export only, a download will be forced.
 if (!empty($_POST['form_csvexport'])) {
     header("Pragma: public");
     header("Expires: 0");
     header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
     header("Content-Type: application/force-download");
-    header("Content-Disposition: attachment; filename=diagnostic_code_use.csv");
+    $today = getdate()['year']  . getdate()['mon'] . getdate()['mday'] ;
+    $today = text($today);
+    $filename = "diagnostic_code_use" . "_" . $GLOBALS['openemr_name'] . "_" .  $today . ".csv" ;
+    header("Content-Disposition: attachment; filename=" . $filename . '"');
     header("Content-Description: File Transfer");
 } else {
     ?>
@@ -117,8 +99,6 @@ if (!empty($_POST['form_csvexport'])) {
 <head>
 
 <title><?php echo text($report_title); ?></title>
-
-
 
     <?php Header::setupHeader(['datetime-picker', 'report-helper']); ?>
 
@@ -180,9 +160,9 @@ $(function () {
 <span class='title'><?php echo xlt('Report'); ?> - <?php echo text($report_title);   ?></span>
 
 <div id="report_parameters_daterange">
-    <?php if (!(empty($to_date) && empty($from_date))) { ?>
-        <?php echo text(oeFormatShortDate($from_date)) . " &nbsp; " . xlt('to{{Range}}') . " &nbsp; " . text(oeFormatShortDate($to_date)); ?>
-<?php } ?>
+    <?php if (!(empty($to_date) && empty($from_date))) {
+         echo text(oeFormatShortDate($from_date)) . " &nbsp; " . xlt('to{{Range}}') . " &nbsp; " . text(oeFormatShortDate($to_date));
+         } ?>
 </div>
 
 <form name='theform' id='theform' method='post' action='diagnostic_code_use.php' onsubmit='return top.restoreSession()'>
@@ -234,12 +214,13 @@ $(function () {
             <td>
 
                 <select name="form_age_range" id="form_age_range">
-                    <option value="1"> 30 or under</option>
-                    <option value="2">31-40</option>
-                    <option value="3">41-50</option>
-                    <option value="4">51-60</option>
-                    <option value="5">61-70</option>
-                    <option value="6"> over 70 </option>
+                    <option value="0" > any age </option>
+                    <option value="00-30"> 30 or under</option>
+                    <option value="31-40">31-40</option>
+                    <option value="41-50">41-50</option>
+                    <option value="51-60">51-60</option>
+                    <option value="61-70">61-70</option>
+                    <option value="71-00"> over 70 </option>
                 </select>
             </td>
             </tr>
@@ -248,13 +229,13 @@ $(function () {
                 <?php echo xlt('Codes'); ?>:
             </td>
              <td>
-             <input type='hidden' name='form_code' id='form_code' value='' />
-               <input type='hidden' name='form_code_description' id='form_code_description' value='' />
+             <input type='hidden' name='form_codes' id='form_codes' value='' />
+                <input type='hidden' name='form_code_types' id='form_code_types' value='' />
+             <input type='hidden' name='form_code_description' id='form_code_description' value='' />
               <div class="btn-group" role="group">
                 <a href='#' class='btn btn-secondary' style="margin-right:5px;" onclick='selectCodes();'> <?php echo xlt('select codes');?>  </a>
                 </div>
             </td>
-
         </tr>
     </table>
 
@@ -271,7 +252,7 @@ $(function () {
                         <?php echo xlt('Submit'); ?>
                     </a>
                     <?php if (!empty($_POST['form_refresh'])) { ?>
-                    <a href='#' class='btn btn-secondary btn-transmit' onclick='$("#form_csvexport").attr("value","true");  alert(<?php echo xlj('The destination form was closed.'); ?>);'>
+                    <a href='#' class='btn btn-secondary btn-transmit' onclick='$("#form_csvexport").attr("value","true"); $("#theform").submit();' >
                         <?php echo xlt('Export to CSV'); ?>
                     </a>
                       <a href='#' id='printbutton' class='btn btn-secondary btn-print'>
@@ -295,14 +276,15 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     if ($_POST['form_csvexport']) {
         // CSV headers:
         echo csvEscape(xl('ID')) . ',';
-        echo csvEscape(xl('Last Visit')) . ',';
-        echo csvEscape(xl('Facility')) . ',';
-        echo csvEscape(xl('Encounter Provider')) . ',';
-        echo csvEscape(xl('Last{{Name}}')) . ',';
-        echo csvEscape(xl('First{{Name}}')) . ',';
+        echo csvEscape(xl('Issue Date')) . ',';
+        echo csvEscape(xl('Provider')) . ',';
+        echo csvEscape(xl('Patient Last Name')) . ',';
+        echo csvEscape(xl('Paient First Name')) . ',';
         echo csvEscape(xl('Date of Birth')) . ',';
         echo csvEscape(xl('Gender')) . ',';
-        echo csvEscape(xl('Reason for encounter')) . "\n";
+        echo csvEscape(xl('Code set')) . ',';
+          echo csvEscape(xl('Code')) . ',';
+        echo csvEscape(xl('Description')) . "\n";
     } else {
         ?>
   <div id="report_results">
@@ -310,20 +292,22 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
    <thead class='thead-light'>
     <th> <?php echo xlt('ID'); ?> </th>
      <th> <?php echo xlt('Issue Date'); ?> </th>
-    <th> <?php echo xlt('Issue Provider'); ?> </th>
+    <th> <?php echo xlt('Provider'); ?> </th>
     <th> <?php echo xlt('Patient'); ?> </th>
     <th> <?php echo xlt('Date of Birth'); ?> </th>
      <th> <?php echo xlt('Gender'); ?> </th>
-     <th> <?php echo xlt('Code'); ?> </th>
+     <th> <?php echo xlt('Code Set'); ?> </th>
+      <th> <?php echo xlt('Code'); ?> </th>
      <th> <?php echo xlt('Description'); ?> </th>
 
    </thead>
  <tbody>
         <?php
-    } // end not export
 
     // disply chosen codes
-    echo ("<br>" . $form_code . " " . $form_code_description . "</>");
+    echo ("<br>" . $form_codes . " " . $form_code_description . "</>");
+
+    } //end not csv export
 
     $totalpts = 0;
     $sqlArrayBind = array();
@@ -332,66 +316,40 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
    // "p.pid, p.pubpid, p.DOB, p.sex, " .
     "p.pid, p.pubpid, p.DOB, p.sex, l.diagnosis, l.title, l.date " ;
 
+   $query .= "FROM patient_data AS p " .
+             "JOIN lists AS l ON " .
+            "l.pid = p.pid " ;
 
-  //  if (!empty($form_code)){
-   //     $query .= ", l.diagnosis ";
-  //  }
-   //  .   "count(l.date) AS lcount, max(l.date) AS ldate " .
-   // "i1.date AS idate1, i2.date AS idate2, " .
-   // "c1.name AS cname1, c2.name AS cname2 " .
-   $query .= "FROM patient_data AS p " ;
-
-    // can asign a medical problem directly from demographic, or else from an encounter. i think 'provider' is only recorded in an encounter
-    // so only display if medical issue is in both 'lists' and and encounter - match by date perhaps?
-    $query .= "JOIN lists AS l ON " .
-    //   "l.pid = p.pid AND " .
-        "l.pid = p.pid " ;
-   /*  $query .= "JOIN users AS u ON " .
-        "p.providerID = u.id" ;
-*/
     if (!empty($from_date)) {
-
-    //    "l.date >= ? AND " .
-     //   "l.date <= ? ";
-    //    array_push($sqlArrayBind, $from_date . ' 00:00:00', $to_date . ' 23:59:59');
-        // lists has field 'user', but not 'provider'
-     //   if ($form_provider) {
-   //         $query .= "AND l.user = ? ";
-      //      array_push($sqlArrayBind, $form_provider);
-      //  }
-    } else {
-        if ($form_provider) {
- //           $query .= "JOIN lists AS l ON " .
- //           "l.pid = p.pid AND e.provider_id = ? ";
- //           array_push($sqlArrayBind, $form_provider);
-        } else {
-          //  $query .= " JOIN lists AS l ON " .
-          // "l.pid = p.pid ";
-        }
+        $query .= "AND l.date >= ? AND  l.date <= ? ";
+        array_push($sqlArrayBind, $from_date . ' 00:00:00', $to_date . ' 23:59:59');
     }
-    if (!empty($form_code)){
-     //  array_push($sqlArrayBind, $form_code);
-     //   array_push($sqlArrayBind, 'CD10-HC-CHO7:' . $form_code);
-    // $query .= "JOIN lists AS l " ;
-  //  $query .= "JOIN lists AS l WHERE " .
-     $query .= " WHERE " .
-              //  " l.pid = p.pid AND  l.diagnosis =? ";
-         " l.diagnosis LIKE " . "'" . "%" . $form_code . "'" . ' ';
-
-
+    if (!empty($form_codes)){
+       // make an array of desired codes
+       $req_codes = explode(",", $form_codes);
+       $first = true;
+       $query .= " WHERE " ;
+       foreach ($req_codes as $value){
+            if ($first){
+            $query .= " l.diagnosis LIKE " . "'" . "%" . $value . "'" . ' ';
+            $first = false;
+         } else {
+            $query .= "OR l.diagnosis LIKE " . "'" . "%" . $value . "'" . ' ';
+        }
+     }
     }
     if (!empty($form_gender) ){
-        if ( empty($form_code)){
+        if ( empty($form_codes)){
           array_push($sqlArrayBind, $form_gender);
-         $query .= "WHERE p.sex =? " ;
+          $query .= "WHERE p.sex =? " ;
         }
         else {
-             array_push($sqlArrayBind, $form_gender);
+            array_push($sqlArrayBind, $form_gender);
             $query .= "AND p.sex =? " ;
         }
     }
-
-   (new SystemLogger())->debug("diag Query: ",array( $query , $sqlArrayBind));
+    $query .= "ORDER BY l.diagnosis ASC";
+   (new SystemLogger())->debug("Query: ",array( $query , $sqlArrayBind));
     $res = sqlStatement($query, $sqlArrayBind);
 
     $prevpid = 0;
@@ -406,7 +364,8 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
         $age = '';
         if (!empty($row['DOB'])) {
             $dob = $row['DOB'];
-            $tdy = $row['ldate'] ? $row['ldate'] : date('Y-m-d');
+
+            $tdy = date('Y-m-d');
             $ageInMonths = (substr($tdy, 0, 4) * 12) + substr($tdy, 5, 2) -
                    (substr($dob, 0, 4) * 12) - substr($dob, 5, 2);
             $dayDiff = substr($tdy, 8, 2) - substr($dob, 8, 2);
@@ -415,9 +374,46 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             }
 
             $age = intval($ageInMonths / 12);
+
+            if (!empty($form_age_range) && $form_age_range != "0"){
+                $upper_range = intval(substr($form_age_range,strpos($form_age_range,"-"),2));
+                $lower_range = intval(substr($form_age_range,0,2));
+                if ($upper_range != 0){
+                 if ($age > $upper_range || $age <= $lower_range){
+                         continue;
+                 } else {if ($age < $lower_range) continue; }
+                }
+            }
         }
+        // get code type label
+        $sqlArrayBind = array();
+        // if more than one issue recorded at same time they are recorded in a single record - each separated by ';'
+        $code = "";
+        $diagnoses = explode(';', $row['diagnosis']);
+        $first = true;
+        foreach ($diagnoses as $value) {
+            if (!$first){
+                 $code .=  ';';
+            } else {$first = false;}
+                $str = explode (':', $value);
+            $code .= $str[1];
+
+           }
+
+        $strings = explode(':',$row['diagnosis']);
+        $codeType = $strings[0];
+      /*  $code = $strings[1]; */
+        $sqlArrayBind[] = $codeType;
+     //    (new SystemLogger())->debug("codes: ",array( $codeType , $sqlArrayBind));
+        $cquery = "SELECT ct_label FROM code_types WHERE ct_key = ?";
+        $cres = sqlStatement($cquery, $sqlArrayBind);
+        $crow = sqlFetchArray($cres);
 
         // get provider name
+        if (!empty($form_provider)) {
+            if ($form_provider != $row['providerID'])
+                continue;
+        }
         $sqlArrayBind = array();
         $providerID = $row['providerID'];
         $sqlArrayBind[] = $providerID;
@@ -431,14 +427,15 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
         if ($_POST['form_csvexport']) {
             echo csvEscape($row['pubpid']) . ',';
             // format dates by users preference
-            echo csvEscape(oeFormatDateTime($row['edate'], "global", false)) . ',';
-            echo csvEscape($erow['facility']) . ',';
-            echo csvEscape($prow['fname'] . " " . $prow['lname']) . ',';
+            echo csvEscape(oeFormatDateTime($row['date'], "global", false)) . ',';
+            echo csvEscape($prfname . " " . $prlname) . ',';
             echo csvEscape($row['lname']) . ',';
             echo csvEscape($row['fname']) . ',';
             echo csvEscape(oeFormatShortDate(substr($row['DOB'], 0, 10))) . ',';
             echo csvEscape($row['sex']) . ',';
-            echo csvEscape($erow['reason']) . "\n";
+            echo csvEscape($crow['ct_label']) . ',';
+            echo csvEscape($code) . ',';
+            echo csvEscape($row['title']) . "\n";
         } else {
             ?>
         <tr>
@@ -446,7 +443,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
                 <?php echo text($row['pubpid']); ?>
             </td>
             <td>
-                <?php echo text(oeFormatDateTime($row['date'], "global", false)) ;?>
+                <?php echo text(oeFormatShortDate($row['date'], "global", false)) ;?>
             </td>
             <td>
                 <?php echo text($prfname . " " . $prlname); ?>
@@ -462,14 +459,15 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             <?php echo text($row['sex']); ?>
             </td>
              <td>
-                <?php echo text($row['diagnosis']); ?>
+                <?php echo text($crow['ct_label']); /* code */?>
+            </td>
+             <td>
+                <?php echo /*text($row['diagnosis']);*/ text($code) ; /* code */?>
             </td> <td>
-                <?php echo text($row['title']); ?>
+                <?php echo text($row['title']); /* description */ ?>
             </td>
 
-            <td>
-            <?php echo text($erow['reason']); ?>
-            </td>
+
 
 
         </tr>
