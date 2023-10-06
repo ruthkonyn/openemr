@@ -19,7 +19,7 @@
 /*
  * 'lists' table in db holds info about medical issues per patient
  */
-
+/* srcdir is openemr/library */
 require_once("../globals.php");
 require_once("$srcdir/patient.inc");
 require_once("$srcdir/options.inc.php");
@@ -43,7 +43,7 @@ $form_gender = empty($_POST['form_sex']) ? 0 : text($_POST['form_sex']);
 $form_codes = empty($_POST['form_codes']) ? 0 : $_POST['form_codes'];
 $form_code_types = empty($_POST['form_code_types']) ? 'no description' : $_POST['form_code_types'];
 
-$form_age_range = empty($_POST['form_age_range']) ? 0 : intval($_POST['form_age_range']);
+$form_age_range = empty($_POST['form_age_range']) ? 0 : text($_POST['form_age_range']);
 
 $report_title = xl("Diagnostic Code Use");
 
@@ -77,7 +77,8 @@ function selectCodes() {
         form_code_type_list.push(codetype)
        f['form_codes'].value = form_code_list
        f['form_code_types'].value = form_code_type_list
-    }
+
+      }
 
 </script>
 <?php
@@ -213,15 +214,24 @@ $(function () {
             </td>
             <td>
 
-                <select name="form_age_range" id="form_age_range">
-                    <option value="0" > any age </option>
-                    <option value="00-30"> 30 or under</option>
-                    <option value="31-40">31-40</option>
-                    <option value="41-50">41-50</option>
-                    <option value="51-60">51-60</option>
-                    <option value="61-70">61-70</option>
-                    <option value="71-00"> over 70 </option>
-                </select>
+                <select name="form_age_range" id="form_age_range" class="form-control">
+                    <option value="0" > All ages </option>
+                    <option> -------
+                     <option value="0-05"> Under-fives (5 years or  younger)</option>
+                     <option value="00-15">Children (0-15)</option>
+                     <option value="16-00">Adults (16 or older)</option>
+                     <option value="65-00">Elderly (65+)</option>
+                     <option> -------
+                    <option value="00-02">0-2 years of age</option>
+                    <option value="03-05">3-5 years of age</option>
+                    <option value="06-15">6-15 years of age </option>
+                    <option value="16-25">16-25 years of age</option>
+                    <option value="26-40">26-40 years of age</option>
+                    <option value="41-60">41-60 years of age</option>
+                    <option value="61-80">61-80 years of age</option>
+                    <option value="81-00"> 81 years of age or older </option>
+                    <option> -------
+                   </select>
             </td>
             </tr>
             <tr>
@@ -287,6 +297,22 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
         echo csvEscape(xl('Description')) . "\n";
     } else {
         ?>
+        <br> To sort on other columns please use the CSV file </br>
+  <script>
+        var sel = document.getElementById('form_age_range');
+        val = sel.value
+     /*   document.getElementById('form_age_range').onclick = function() {
+            var opts = sel.options;
+            for (var opt, j = 0; opt = opts[j]; j++) {
+                if (opt.value == val) {
+                    sel.selectedIndex = j;
+                    break;
+                }
+            }
+        }
+        */
+</script>
+
   <div id="report_results">
   <table class='table' id='mymaintable'>
    <thead class='thead-light'>
@@ -304,9 +330,8 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
  <tbody>
         <?php
 
-    // disply chosen codes
-    echo ("<br>" . $form_codes . " " . $form_code_description . "</>");
-
+    // disply chosen codes etc
+    echo ("<br>" . $form_codes . " " . $form_age_range . "</>");
     } //end not csv export
 
     $totalpts = 0;
@@ -348,68 +373,43 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             $query .= "AND p.sex =? " ;
         }
     }
-    $query .= "ORDER BY l.diagnosis ASC";
+    $query .= "ORDER BY p.lname ASC";
    (new SystemLogger())->debug("Query: ",array( $query , $sqlArrayBind));
     $res = sqlStatement($query, $sqlArrayBind);
 
-    $prevpid = 0;
+
     while ($row = sqlFetchArray($res)) {
 
         (new SystemLogger())->debug("query res pid: ",$row );
 
-        if ($row['pid'] == $prevpid) {
-            continue;
-        }
-        $prevpid = $row['pid'];
-        $age = '';
-        if (!empty($row['DOB'])) {
+        // calculate patient's age in years and compare to selected ages if requested
+        if (!empty($form_age_range) && $form_age_range != "0"){
+                (new SystemLogger())->debug("dob ",$row );
+            if (empty($row['DOB'])) {
+             continue; //ignore this record as no dob to check against requested age range
+            }
             $dob = $row['DOB'];
-
             $tdy = date('Y-m-d');
+            $age = '';
             $ageInMonths = (substr($tdy, 0, 4) * 12) + substr($tdy, 5, 2) -
                    (substr($dob, 0, 4) * 12) - substr($dob, 5, 2);
             $dayDiff = substr($tdy, 8, 2) - substr($dob, 8, 2);
             if ($dayDiff < 0) {
                 --$ageInMonths;
             }
-
             $age = intval($ageInMonths / 12);
 
-            if (!empty($form_age_range) && $form_age_range != "0"){
-                $upper_range = intval(substr($form_age_range,strpos($form_age_range,"-"),2));
-                $lower_range = intval(substr($form_age_range,0,2));
-                if ($upper_range != 0){
-                 if ($age > $upper_range || $age <= $lower_range){
+            $upper_range = intval(substr($form_age_range,strpos($form_age_range,"-")+1,2));
+            $lower_range = intval(substr($form_age_range,0,2));
+
+    (new SystemLogger())->debug("age & ranges ",array($age,$upper_range,$lower_range, $form_age_range) );
+            if ($upper_range != 0){
+                 if ($age > $upper_range || $age <= $lower_range || $age < $lower_range){
                          continue;
-                 } else {if ($age < $lower_range) continue; }
-                }
+                 }
             }
         }
-        // get code type label
-        $sqlArrayBind = array();
-        // if more than one issue recorded at same time they are recorded in a single record - each separated by ';'
-        $code = "";
-        $diagnoses = explode(';', $row['diagnosis']);
-        $first = true;
-        foreach ($diagnoses as $value) {
-            if (!$first){
-                 $code .=  ';';
-            } else {$first = false;}
-                $str = explode (':', $value);
-            $code .= $str[1];
-
-           }
-
-        $strings = explode(':',$row['diagnosis']);
-        $codeType = $strings[0];
-      /*  $code = $strings[1]; */
-        $sqlArrayBind[] = $codeType;
-     //    (new SystemLogger())->debug("codes: ",array( $codeType , $sqlArrayBind));
-        $cquery = "SELECT ct_label FROM code_types WHERE ct_key = ?";
-        $cres = sqlStatement($cquery, $sqlArrayBind);
-        $crow = sqlFetchArray($cres);
-
-        // get provider name
+// get provider name
         if (!empty($form_provider)) {
             if ($form_provider != $row['providerID'])
                 continue;
@@ -424,19 +424,45 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
         $prfname = $prow['fname'];
         $prlname = $prow['lname'];
 
-        if ($_POST['form_csvexport']) {
-            echo csvEscape($row['pubpid']) . ',';
-            // format dates by users preference
-            echo csvEscape(oeFormatDateTime($row['date'], "global", false)) . ',';
-            echo csvEscape($prfname . " " . $prlname) . ',';
-            echo csvEscape($row['lname']) . ',';
-            echo csvEscape($row['fname']) . ',';
-            echo csvEscape(oeFormatShortDate(substr($row['DOB'], 0, 10))) . ',';
-            echo csvEscape($row['sex']) . ',';
-            echo csvEscape($crow['ct_label']) . ',';
-            echo csvEscape($code) . ',';
-            echo csvEscape($row['title']) . "\n";
-        } else {
+        // get code type label
+
+        // if more than one issue is recorded at same time, they are recorded in a single record - each separated by ';'
+        // get ';' separated list of codes stripped of code type info
+        // generate a record for each of the codes in the list
+        $code = '';
+       // $codeType = '';
+        $diagnoses = explode(';', $row['diagnosis']);
+        foreach ($diagnoses as $value) {
+            $str = explode (':', $value);
+            $code = $str[1];
+            if (!empty ($form_codes)){
+                if (!str_contains($form_codes,$code )){
+                    continue;
+                } //is each code in the list of required codes
+            }
+            $codeKey = $str[0];
+            $sqlArrayBind = array();
+            $sqlArrayBind[] = $codeKey;
+     //    (new SystemLogger())->debug("codes: ",array( $codeType , $sqlArrayBind));
+            $cquery = "SELECT ct_label FROM code_types WHERE ct_key = ?";
+            $cres = sqlStatement($cquery, $sqlArrayBind);
+            $crow = sqlFetchArray($cres);
+           // $codeType = $crow['ct_label'];
+
+            if ($_POST['form_csvexport']) {
+                echo csvEscape($row['pubpid']) . ',';
+                // format dates by users preference
+                echo csvEscape(oeFormatDateTime($row['date'], "global", false)) . ',';
+                echo csvEscape($prfname . " " . $prlname) . ',';
+                echo csvEscape($row['lname']) . ',';
+                echo csvEscape($row['fname']) . ',';
+                echo csvEscape($row['mname']) . ',';
+                echo csvEscape(oeFormatShortDate(substr($row['DOB'], 0, 10))) . ',';
+                echo csvEscape($row['sex']) . ',';
+                echo csvEscape($crow['ct_label']) . ',';
+                echo csvEscape($code) . ',';
+                echo csvEscape($row['title']) . "\n";
+            } else {
             ?>
         <tr>
             <td>
@@ -450,7 +476,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             </td>
 
             <td>
-                <?php echo text($row['lname'] . ', ' . $row['fname']); ?>
+                <?php echo text($row['lname'] . ', ' . $row['fname'] . ' ' . $row['mname']); ?>
             </td>
             <td>
                 <?php echo text(oeFormatShortDate(substr($row['DOB'], 0, 10))); ?>
@@ -466,21 +492,18 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             </td> <td>
                 <?php echo text($row['title']); /* description */ ?>
             </td>
-
-
-
-
         </tr>
             <?php
         } // end not export
         ++$totalpts;
+        } //end each diagnosis code
     } // end while
     if (!$_POST['form_csvexport']) {
         ?>
 
    <tr class="report_totals">
     <td colspan='9'>
-        <?php echo xlt('Total Number of Patients'); ?>
+        <?php echo xlt('Total Number of Records'); ?>
    :
         <?php echo text($totalpts); ?>
   </td>
