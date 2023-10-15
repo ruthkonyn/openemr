@@ -41,6 +41,12 @@ $form_provider = empty($_POST['form_provider']) ? 0 : intval($_POST['form_provid
 $form_gender = empty($_POST['form_sex']) ? 0 : text($_POST['form_sex']);
 
 $form_codes = empty($_POST['form_codes']) ? 0 : $_POST['form_codes'];
+$form_codes = !empty($_POST['form_selected_codes']) ? $_POST['form_selected_codes'] : $form_codes;
+
+$form_code_description = empty($_POST['form_code_description']) ? 0 : $_POST['form_code_description'];
+
+$form_clear_codes = empty($_POST['form_clear_codes']) ? 0 : text($_POST['form_clear_codes']);
+
 $form_code_types = empty($_POST['form_code_types']) ? 'no description' : $_POST['form_code_types'];
 
 $form_age_range = empty($_POST['form_age_range']) ? 0 : text($_POST['form_age_range']);
@@ -50,9 +56,9 @@ $report_title = xl("Diagnostic Code Use");
 // address for find code pop up
 $url = '';
 
-(new SystemLogger())->debug("lets go: ",array( $form_gender, $form_age_range, $from_Date, $to_date, $form_codes, $form_code_description ));
+(new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "; age:" . $form_age_range, $from_date, $to_date, "; codes:" .  $form_codes, $form_code_description, $form_clear_codes, "; user:" . $form_provider ));
 
-if (empty($_POST['form_csvexport'])) {
+ if (empty($_POST['form_csvexport'])) { /* output javascript only if displaying, not if sending to csv file */
 
 ?>
 <script>
@@ -77,12 +83,12 @@ function selectCodes() {
         form_code_type_list.push(codetype)
        f['form_codes'].value = form_code_list
        f['form_code_types'].value = form_code_type_list
-
       }
 
 </script>
 <?php
-}
+ }
+
 // In the case of CSV export only, a download will be forced.
 if (!empty($_POST['form_csvexport'])) {
     header("Pragma: public");
@@ -124,9 +130,14 @@ $(function () {
 
 /* specifically include & exclude from printing */
 @media print {
-    #report_parameters {
+ /*  #report_parameters {
         visibility: hidden;
         display: none;
+    }
+*/
+     #report_parameters {
+        visibility: visible;
+        display: inline;
     }
     #report_parameters_daterange {
         visibility: visible;
@@ -162,7 +173,7 @@ $(function () {
 
 <div id="report_parameters_daterange">
     <?php if (!(empty($to_date) && empty($from_date))) {
-         echo text(oeFormatShortDate($from_date)) . " &nbsp; " . xlt('to{{Range}}') . " &nbsp; " . text(oeFormatShortDate($to_date));
+         echo "  From " . text(oeFormatShortDate($from_date)) . " &nbsp; " . xlt('to{{Range}}') . " &nbsp; " . text(oeFormatShortDate($to_date));
          } ?>
 </div>
 
@@ -213,9 +224,8 @@ $(function () {
                 <?php echo xlt('Age Group'); ?>:
             </td>
             <td>
-
                 <select name="form_age_range" id="form_age_range" class="form-control">
-                    <option value="0" > All ages </option>
+                    <option value="0" <?php if(!empty($form_age_range) && $form_age_range == "0"){ echo (text("selected")); } ?> > All ages </option>
                     <option> -------
                      <option value="0-05"> Under-fives (5 years or  younger)</option>
                      <option value="00-15">Children (0-15)</option>
@@ -224,8 +234,8 @@ $(function () {
                      <option> -------
                     <option value="00-02">0-2 years of age</option>
                     <option value="03-05">3-5 years of age</option>
-                    <option value="06-15">6-15 years of age </option>
-                    <option value="16-25">16-25 years of age</option>
+                    <option value="06-15" >6-15 years of age </option>
+                    <option value="16-25"<?php if(!empty($form_age_range) && $form_age_range == "16-25"){ echo (text("selected")); } ?> >16-25 years of age</option>
                     <option value="26-40">26-40 years of age</option>
                     <option value="41-60">41-60 years of age</option>
                     <option value="61-80">61-80 years of age</option>
@@ -244,6 +254,16 @@ $(function () {
              <input type='hidden' name='form_code_description' id='form_code_description' value='' />
               <div class="btn-group" role="group">
                 <a href='#' class='btn btn-secondary' style="margin-right:5px;" onclick='selectCodes();'> <?php echo xlt('select codes');?>  </a>
+                 <td class='col-form-label'>
+                <?php echo xlt('Selected Codes'); ?>:
+            </td>
+                <td>
+
+                  <select name="form_selected_codes" id="form_selected_codes" class="form-control">
+                    <option value=<?php echo ($form_codes); ?> selected > <?php echo($form_codes); ?> </option>
+                     <option value= "clear"> Clear </option>
+                </select>
+                </td>
                 </div>
             </td>
         </tr>
@@ -258,17 +278,20 @@ $(function () {
             <td>
         <div class="text-center">
                   <div class="btn-group" role="group">
-                    <a href='#' class='btn btn-secondary btn-save' onclick='$("#form_csvexport").val(""); $("#form_refresh").attr("value","true"); $("#theform").submit();'>
-                        <?php echo xlt('Submit'); ?>
+                    <a href='#' class='btn btn-secondary btn-save' onclick='$("#form_csvexport").val(""); $("#form_reset").attr("value","true");("#form_refresh").attr("value","true"); $("#theform").submit();'>
+                        <?php echo xlt('Reset'); ?>
+
+                   <a href='#' class='btn btn-secondary btn-save' onclick='$("#form_csvexport").val("");$("#form_refresh").attr("value","true"); $("#theform").submit();'>
+                  <?php echo xlt('Submit'); ?>
+
                     </a>
-                    <?php if (!empty($_POST['form_refresh'])) { ?>
-                    <a href='#' class='btn btn-secondary btn-transmit' onclick='$("#form_csvexport").attr("value","true"); $("#theform").submit();' >
+                    <a href='#' class='btn btn-secondary btn-transmit' onclick='$("#form_csvexport").attr("value","true"); $("#form_refresh").attr("value","true");$("#theform").submit();' >
                         <?php echo xlt('Export to CSV'); ?>
                     </a>
                       <a href='#' id='printbutton' class='btn btn-secondary btn-print'>
                             <?php echo xlt('Print'); ?>
                       </a>
-                    <?php } ?>
+
               </div>
         </div>
             </td>
@@ -402,18 +425,22 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             $upper_range = intval(substr($form_age_range,strpos($form_age_range,"-")+1,2));
             $lower_range = intval(substr($form_age_range,0,2));
 
-    (new SystemLogger())->debug("age & ranges ",array($age,$upper_range,$lower_range, $form_age_range) );
+ //   (new SystemLogger())->debug("age & ranges ",array($age,$upper_range,$lower_range, $form_age_range) );
             if ($upper_range != 0){
                  if ($age > $upper_range || $age <= $lower_range || $age < $lower_range){
                          continue;
                  }
             }
-        }
+        } //age selection required
 // get provider name
         if (!empty($form_provider)) {
             if ($form_provider != $row['providerID'])
                 continue;
         }
+        $prfname = "";
+        $prlname = "";
+        if (!empty($row['providerID'])) {
+        // get the name of the provider
         $sqlArrayBind = array();
         $providerID = $row['providerID'];
         $sqlArrayBind[] = $providerID;
@@ -423,6 +450,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
 
         $prfname = $prow['fname'];
         $prlname = $prow['lname'];
+        }
 
         // get code type label
 
