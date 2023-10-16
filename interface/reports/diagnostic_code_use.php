@@ -42,8 +42,9 @@ $form_gender = empty($_POST['form_sex']) ? 0 : text($_POST['form_sex']);
 
 $form_codes = empty($_POST['form_codes']) ? 0 : $_POST['form_codes'];
 $form_codes = !empty($_POST['form_selected_codes']) ? $_POST['form_selected_codes'] : $form_codes;
+        if ($form_codes == "clear"){$form_codes = 0;}
 
-$form_code_description = empty($_POST['form_code_description']) ? 0 : $_POST['form_code_description'];
+$form_code_descriptions = empty($_POST['form_code_descriptions']) ? 0 : $_POST['form_code_descriptions'];
 
 $form_clear_codes = empty($_POST['form_clear_codes']) ? 0 : text($_POST['form_clear_codes']);
 
@@ -56,7 +57,7 @@ $report_title = xl("Diagnostic Code Use");
 // address for find code pop up
 $url = '';
 
-(new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "; age:" . $form_age_range, $from_date, $to_date, "; codes:" .  $form_codes, $form_code_description, $form_clear_codes, "; user:" . $form_provider ));
+(new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "; age:" . $form_age_range, $from_date, $to_date, "; codes:" .  $form_codes, $form_code_types, $form_code_descriptions, $form_clear_codes, "; user:" . $form_provider ));
 
  if (empty($_POST['form_csvexport'])) { /* output javascript only if displaying, not if sending to csv file */
 
@@ -73,16 +74,17 @@ function selectCodes() {
 
  var form_code_list = [];
  var form_code_type_list = []
-
+ var form_code_description_list = []
  // call back for select_codes
  function OnCodeSelected(codetype, code, selector, codedesc) {
  //   alert(codetype + " " + code + " " + selector + " " + codedesc)
        var f = document.forms[0]
-
+       form_code_description_list.push(codedesc)
        form_code_list.push(code)
         form_code_type_list.push(codetype)
        f['form_codes'].value = form_code_list
        f['form_code_types'].value = form_code_type_list
+       f['form_code_descriptions'].value = form_code_description_list
       }
 
 </script>
@@ -227,19 +229,19 @@ $(function () {
                 <select name="form_age_range" id="form_age_range" class="form-control">
                     <option value="0" <?php if(!empty($form_age_range) && $form_age_range == "0"){ echo (text("selected")); } ?> > All ages </option>
                     <option> -------
-                     <option value="0-05"> Under-fives (5 years or  younger)</option>
-                     <option value="00-15">Children (0-15)</option>
-                     <option value="16-00">Adults (16 or older)</option>
-                     <option value="65-00">Elderly (65+)</option>
+                     <option value="00-05" <?php if(!empty($form_age_range) && $form_age_range == "00-05"){ echo (text(" selected")); } ?>> Under-fives (5 years or  younger)</option>
+                     <option value="00-15" <?php if(!empty($form_age_range) && $form_age_range == "00-15"){ echo (text(" selected")); } ?> >Children (0-15)</option>
+                     <option value="16-00" <?php if(!empty($form_age_range) && $form_age_range == "16-00"){ echo (text(" selected")); } ?>>Adults (16 or older)</option>
+                     <option value="65-00" <?php if(!empty($form_age_range) && $form_age_range == "65-00"){ echo (text(" selected")); } ?>>Elderly (65+)</option>
                      <option> -------
-                    <option value="00-02">0-2 years of age</option>
-                    <option value="03-05">3-5 years of age</option>
-                    <option value="06-15" >6-15 years of age </option>
-                    <option value="16-25"<?php if(!empty($form_age_range) && $form_age_range == "16-25"){ echo (text("selected")); } ?> >16-25 years of age</option>
-                    <option value="26-40">26-40 years of age</option>
-                    <option value="41-60">41-60 years of age</option>
-                    <option value="61-80">61-80 years of age</option>
-                    <option value="81-00"> 81 years of age or older </option>
+                    <option value="00-02" <?php if(!empty($form_age_range) && $form_age_range == "00-02"){ echo (text(" selected")); } ?>>0-2 years of age</option>
+                    <option value="03-05" <?php if(!empty($form_age_range) && $form_age_range == "03-05"){ echo (text(" selected")); } ?>>3-5 years of age</option>
+                    <option value="06-15" <?php if(!empty($form_age_range) && $form_age_range == "06-15"){ echo (text(" selected")); } ?> >6-15 years of age </option>
+                    <option value="16-25" <?php if(!empty($form_age_range) && $form_age_range == "16-25"){ echo (text(" selected")); } ?> >16-25 years of age</option>
+                    <option value="26-40" <?php if(!empty($form_age_range) && $form_age_range == "26-40"){ echo (text(" selected")); } ?>>26-40 years of age</option>
+                    <option value="41-60" <?php if(!empty($form_age_range) && $form_age_range == "41-60"){ echo (text(" selected")); } ?>>41-60 years of age</option>
+                    <option value="61-80" <?php if(!empty($form_age_range) && $form_age_range == "61-80"){ echo (text(" selected")); } ?>>61-80 years of age</option>
+                    <option value="81-00"<?php if(!empty($form_age_range) && $form_age_range == "81-00"){ echo (text(" selected")); } ?> > 81 years of age or older </option>
                     <option> -------
                    </select>
             </td>
@@ -250,19 +252,19 @@ $(function () {
             </td>
              <td>
              <input type='hidden' name='form_codes' id='form_codes' value='' />
-                <input type='hidden' name='form_code_types' id='form_code_types' value='' />
-             <input type='hidden' name='form_code_description' id='form_code_description' value='' />
-              <div class="btn-group" role="group">
+             <input type='hidden' name='form_code_types' id='form_code_types' value='' />
+             <input type='hidden' name='form_code_descriptions' id='form_code_descriptions' value='' />
+             <div class="btn-group" role="group">
                 <a href='#' class='btn btn-secondary' style="margin-right:5px;" onclick='selectCodes();'> <?php echo xlt('select codes');?>  </a>
-                 <td class='col-form-label'>
-                <?php echo xlt('Selected Codes'); ?>:
+                <td class='col-form-label'>
+                <?php echo xlt('Codes; Clear Codes'); ?>:
             </td>
                 <td>
 
                   <select name="form_selected_codes" id="form_selected_codes" class="form-control">
                     <option value=<?php echo ($form_codes); ?> selected > <?php echo($form_codes); ?> </option>
                      <option value= "clear"> Clear </option>
-                </select>
+                 </select>
                 </td>
                 </div>
             </td>
@@ -278,8 +280,6 @@ $(function () {
             <td>
         <div class="text-center">
                   <div class="btn-group" role="group">
-                    <a href='#' class='btn btn-secondary btn-save' onclick='$("#form_csvexport").val(""); $("#form_reset").attr("value","true");("#form_refresh").attr("value","true"); $("#theform").submit();'>
-                        <?php echo xlt('Reset'); ?>
 
                    <a href='#' class='btn btn-secondary btn-save' onclick='$("#form_csvexport").val("");$("#form_refresh").attr("value","true"); $("#theform").submit();'>
                   <?php echo xlt('Submit'); ?>
@@ -324,16 +324,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
   <script>
         var sel = document.getElementById('form_age_range');
         val = sel.value
-     /*   document.getElementById('form_age_range').onclick = function() {
-            var opts = sel.options;
-            for (var opt, j = 0; opt = opts[j]; j++) {
-                if (opt.value == val) {
-                    sel.selectedIndex = j;
-                    break;
-                }
-            }
-        }
-        */
+
 </script>
 
   <div id="report_results">
@@ -350,11 +341,10 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
      <th> <?php echo xlt('Description'); ?> </th>
 
    </thead>
- <tbody>
+   <tbody>
         <?php
-
     // disply chosen codes etc
-    echo ("<br>" . $form_codes . " " . $form_age_range . "</>");
+     //   echo ("<br>" . $form_codes . " " . $form_age_range . "</>");
     } //end not csv export
 
     $totalpts = 0;
@@ -364,7 +354,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
    // "p.pid, p.pubpid, p.DOB, p.sex, " .
     "p.pid, p.pubpid, p.DOB, p.sex, l.diagnosis, l.title, l.date " ;
 
-   $query .= "FROM patient_data AS p " .
+    $query .= "FROM patient_data AS p " .
              "JOIN lists AS l ON " .
             "l.pid = p.pid " ;
 
@@ -379,12 +369,12 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
        $query .= " WHERE " ;
        foreach ($req_codes as $value){
             if ($first){
-            $query .= " l.diagnosis LIKE " . "'" . "%" . $value . "'" . ' ';
-            $first = false;
-         } else {
-            $query .= "OR l.diagnosis LIKE " . "'" . "%" . $value . "'" . ' ';
+                $query .= " l.diagnosis LIKE " . "'" . "%" . $value . "%" . "'" . ' ';
+                $first = false;
+            } else {
+                $query .= "OR l.diagnosis LIKE " . "'" . "%" . $value . "%" . "'" . ' ';
+            }
         }
-     }
     }
     if (!empty($form_gender) ){
         if ( empty($form_codes)){
@@ -400,14 +390,13 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
    (new SystemLogger())->debug("Query: ",array( $query , $sqlArrayBind));
     $res = sqlStatement($query, $sqlArrayBind);
 
-
     while ($row = sqlFetchArray($res)) {
 
         (new SystemLogger())->debug("query res pid: ",$row );
 
         // calculate patient's age in years and compare to selected ages if requested
         if (!empty($form_age_range) && $form_age_range != "0"){
-                (new SystemLogger())->debug("dob ",$row );
+
             if (empty($row['DOB'])) {
              continue; //ignore this record as no dob to check against requested age range
             }
@@ -421,17 +410,22 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
                 --$ageInMonths;
             }
             $age = intval($ageInMonths / 12);
-
+                //(new SystemLogger())->debug("dob ",$row['DOB'] );
             $upper_range = intval(substr($form_age_range,strpos($form_age_range,"-")+1,2));
             $lower_range = intval(substr($form_age_range,0,2));
+ //  (new SystemLogger())->debug("age & ranges ",array($age,$upper_range,$lower_range, $form_age_range) );
 
- //   (new SystemLogger())->debug("age & ranges ",array($age,$upper_range,$lower_range, $form_age_range) );
             if ($upper_range != 0){
-                 if ($age > $upper_range || $age <= $lower_range || $age < $lower_range){
+                 if ($age > $upper_range){
                          continue;
                  }
             }
-        } //age selection required
+            if ($lower_range != 0){
+                 if ($age <= $lower_range ){
+                     continue;
+                 }
+            }
+        }
 // get provider name
         if (!empty($form_provider)) {
             if ($form_provider != $row['providerID'])
@@ -454,28 +448,31 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
 
         // get code type label
 
-        // if more than one issue is recorded at same time, they are recorded in a single record - each separated by ';'
+        // if more than one issue is recorded for a patient at same time, they are recorded in a single record - each separated by ';'
+        // so format is code_type1:code1;code_typ2:code2 etc
         // get ';' separated list of codes stripped of code type info
         // generate a record for each of the codes in the list
         $code = '';
-       // $codeType = '';
+
         $diagnoses = explode(';', $row['diagnosis']);
+
         foreach ($diagnoses as $value) {
+
             $str = explode (':', $value);
             $code = $str[1];
+
             if (!empty ($form_codes)){
                 if (!str_contains($form_codes,$code )){
-                    continue;
+                     continue;
                 } //is each code in the list of required codes
-            }
+
+            } // if empty, accept all recorded diagnoses
             $codeKey = $str[0];
             $sqlArrayBind = array();
             $sqlArrayBind[] = $codeKey;
-     //    (new SystemLogger())->debug("codes: ",array( $codeType , $sqlArrayBind));
             $cquery = "SELECT ct_label FROM code_types WHERE ct_key = ?";
             $cres = sqlStatement($cquery, $sqlArrayBind);
             $crow = sqlFetchArray($cres);
-           // $codeType = $crow['ct_label'];
 
             if ($_POST['form_csvexport']) {
                 echo csvEscape($row['pubpid']) . ',';
