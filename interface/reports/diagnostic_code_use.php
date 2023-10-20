@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Version 1.0.0 september 2023
+ * Version 1.0.0 October 2023
  *
  * Report of use of diagnostic codes - with option to output as a csv file
  *
@@ -59,7 +59,7 @@ $url = '';
 
 (new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "; age:" . $form_age_range, $from_date, $to_date, "; codes:" .  $form_codes, $form_code_types, $form_code_descriptions, $form_clear_codes, "; user:" . $form_provider ));
 
- if (empty($_POST['form_csvexport'])) { /* output javascript only if displaying, not if sending to csv file */
+ if (empty($_POST['form_csvexport'])) { /* send javascript to client only if displaying, not if sending to csv file */
 
 ?>
 <script>
@@ -132,11 +132,7 @@ $(function () {
 
 /* specifically include & exclude from printing */
 @media print {
- /*  #report_parameters {
-        visibility: hidden;
-        display: none;
-    }
-*/
+
      #report_parameters {
         visibility: visible;
         display: inline;
@@ -260,7 +256,6 @@ $(function () {
                 <?php echo xlt('Codes; Clear Codes'); ?>:
             </td>
                 <td>
-
                   <select name="form_selected_codes" id="form_selected_codes" class="form-control">
                     <option value=<?php echo ($form_codes); ?> selected > <?php echo($form_codes); ?> </option>
                      <option value= "clear"> Clear </option>
@@ -352,7 +347,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     $query = "SELECT " .
     "p.fname, p.mname, p.lname, p.providerID, " .
    // "p.pid, p.pubpid, p.DOB, p.sex, " .
-    "p.pid, p.pubpid, p.DOB, p.sex, l.diagnosis, l.title, l.date " ;
+    "p.pid, p.pubpid, p.DOB, p.sex, l.diagnosis, l.date " ;
 
     $query .= "FROM patient_data AS p " .
              "JOIN lists AS l ON " .
@@ -410,7 +405,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
                 --$ageInMonths;
             }
             $age = intval($ageInMonths / 12);
-                //(new SystemLogger())->debug("dob ",$row['DOB'] );
+
             $upper_range = intval(substr($form_age_range,strpos($form_age_range,"-")+1,2));
             $lower_range = intval(substr($form_age_range,0,2));
  //  (new SystemLogger())->debug("age & ranges ",array($age,$upper_range,$lower_range, $form_age_range) );
@@ -473,6 +468,12 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             $cquery = "SELECT ct_label FROM code_types WHERE ct_key = ?";
             $cres = sqlStatement($cquery, $sqlArrayBind);
             $crow = sqlFetchArray($cres);
+            // get description of the code
+             $sqlArrayBind = array();
+            $sqlArrayBind[] = $code;
+            $dquery = "SELECT code_text FROM codes WHERE code = ?";
+            $dres = sqlStatement($dquery, $sqlArrayBind);
+            $drow = sqlFetchArray($dres);
 
             if ($_POST['form_csvexport']) {
                 echo csvEscape($row['pubpid']) . ',';
@@ -486,7 +487,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
                 echo csvEscape($row['sex']) . ',';
                 echo csvEscape($crow['ct_label']) . ',';
                 echo csvEscape($code) . ',';
-                echo csvEscape($row['title']) . "\n";
+                echo csvEscape($drow['code_text']) . "\n";
             } else {
             ?>
         <tr>
@@ -515,7 +516,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
              <td>
                 <?php echo /*text($row['diagnosis']);*/ text($code) ; /* code */?>
             </td> <td>
-                <?php echo text($row['title']); /* description */ ?>
+                <?php echo text($drow['code_text']); /* description */ ?>
             </td>
         </tr>
             <?php
@@ -528,8 +529,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
 
    <tr class="report_totals">
     <td colspan='9'>
-        <?php echo xlt('Total Number of Records'); ?>
-   :
+        <?php echo xlt('Total Number of Records:'); ?>
         <?php echo text($totalpts); ?>
   </td>
  </tr>
