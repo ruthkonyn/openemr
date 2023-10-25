@@ -43,15 +43,25 @@ $form_gender = empty($_POST['form_sex']) ? 0 : text($_POST['form_sex']);
 $form_clear_codes = empty($_POST['form_clear_codes']) ? false : true;
 
 $form_codes = empty($_POST['form_codes']) ? 0 : $_POST['form_codes'];
-$form_codes = !empty($_POST['form_selected_codes']) ? $_POST['form_selected_codes'] : $form_codes;
 
-  if ($form_clear_codes){
-       if (!empty($_POST['form_codes'] )) {
-           $form_codes = $_POST['form_codes'];
-        } else {
+/* for debug */
+$sc =  $_POST['form_selected_codes'] ? $_POST['form_selected_codes'] : 'none';
+(new SystemLogger())->debug("received codes", array( $form_codes, $form_clear_codes ? "true" : "false", 'selected codes: ' . $sc));
+
+/* if we are to do a csv output, use the displayed codes */
+if ( !empty($_POST['form_csvexport'])) {
+        $form_codes =  $_POST['form_selected_codes'] ? $_POST['form_selected_codes'] : $form_codes;
+    }
+  else {
+        if ($form_clear_codes){
             $form_codes = 0;
         }
-    };
+        else {
+            /* if other paramaters changed then codes comes in as 0, so use previous value */
+            $form_codes =  $_POST['form_codes'] ? $form_codes :  $_POST['form_selected_codes'] ;
+
+        }
+  }
 
 $form_code_descriptions = empty($_POST['form_code_descriptions']) ? 0 : $_POST['form_code_descriptions'];
 $form_code_types = empty($_POST['form_code_types']) ? 'no description' : $_POST['form_code_types'];
@@ -63,11 +73,10 @@ $report_title = xl("Diagnostic Code Use");
 // address for find code pop up
 $url = '';
 //strings
-$str_code_instruction = xlt(" To change code selection, reselect then press 'Submit'. ");
+$str_code_instruction = xlt("Please press 'Submit' to display results");
 $str_codes =  empty($form_codes) ? "All Codes" : $form_codes;
 
-
-(new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "; age:" . $form_age_range, $from_date, $to_date, "; codes:" .  $form_codes,  $form_clear_codes, "user:" . $form_provider . " csv " . $_POST['form_csvexport'] . " selected: " . $_POST['form_selected_codes']));
+(new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "age:" . $form_age_range, $from_date, $to_date, "codes:" .  $form_codes, "clear?" . $form_clear_codes, "user:" . $form_provider ));
 
  if (empty($_POST['form_csvexport'])) { /* send javascript to client only if displaying, not if sending to csv file */
 
@@ -275,7 +284,8 @@ $(function () {
             </td>
                 <td>
                   <select name="form_clear_codes" id="form_clear_codes" class="form-control">
-                     <option value= "clear"> Click to clear codes </option>
+                     <option value= "0" selected > keep code selection </option>
+                     <option value= "clear" > clear code selection </option>
                      </select>
 
                 </div>
@@ -336,7 +346,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     } else {
         ?>
         <br> To sort on other columns please use the CSV file.  &nbsp; &nbsp; &nbsp;
-            <?php /* echo $str_code_instruction; */ ?> </br>
+            <?php  echo $str_code_instruction;  ?> </br>
             <?php /* echo 'Chosen codes: ' . $str_codes; */ ?>
   <script>
      //   var sel = document.getElementById('form_age_range');
