@@ -45,7 +45,7 @@ $form_clear_codes = empty($_POST['form_clear_codes']) ? false : true;
 $form_codes = empty($_POST['form_codes']) ? 0 : $_POST['form_codes'];
 
 /* for debug */
-$sc =  $_POST['form_selected_codes'] ? $_POST['form_selected_codes'] : 'none';
+$sc =  !empty($_POST['form_selected_codes']) ? $_POST['form_selected_codes'] : 'none';
 (new SystemLogger())->debug("received codes", array( $form_codes, $form_clear_codes ? "true" : "false", 'selected codes: ' . $sc));
 
 /* if we are to do a csv output, use the displayed codes */
@@ -277,7 +277,7 @@ $(function () {
             </td>
                 <td>
                   <select name="form_selected_codes" id="form_selected_codes" class="form-control">
-                    <option value=<?php echo ($form_codes); ?> selected > <?php echo $str_codes ;?> </option> </select>
+                    <option value="<?php echo ($form_codes); ?>" selected > <?php echo $str_codes ;?> </option> </select>
                </td>
               <td class='col-form-label'>
                 <?php echo xlt('Clear Codes'); ?>:
