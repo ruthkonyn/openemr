@@ -33,7 +33,6 @@ if (!empty($_POST)) {
         CsrfUtils::csrfNotVerified();
     }
 }
-
 $from_date  = (!empty($_POST['form_from_date'])) ? DateToYYYYMMDD($_POST['form_from_date']) : date('Y-01-01');
 $to_date    = (!empty($_POST['form_to_date'])) ? DateToYYYYMMDD($_POST['form_to_date']) : date('Y-m-d');
 
@@ -52,15 +51,14 @@ $sc =  !empty($_POST['form_selected_codes']) ? $_POST['form_selected_codes'] : '
 if ( !empty($_POST['form_csvexport'])) {
         $form_codes =  $_POST['form_selected_codes'] ? $_POST['form_selected_codes'] : $form_codes;
     }
-  else {
-        if ($form_clear_codes){
-            $form_codes = 0;
-        }
-        else {
+else { /*otherwise display results*/
+         /* select codes takes preference over clear codes if both selected */
+            if (!$form_codes){
+                if(!$form_clear_codes && !empty ($_POST['form_selected_codes'])) {
+                     $form_codes =  $_POST['form_selected_codes'] ;
+                }
             /* if other paramaters changed then codes comes in as 0, so use previous value */
-            $form_codes =  $_POST['form_codes'] ? $form_codes :  $_POST['form_selected_codes'] ;
-
-        }
+                }
   }
 
 $form_code_descriptions = empty($_POST['form_code_descriptions']) ? 0 : $_POST['form_code_descriptions'];
@@ -74,9 +72,26 @@ $report_title = xl("Diagnostic Code Use");
 $url = '';
 //strings
 $str_code_instruction = xlt("Please press 'Submit' to display results");
-$str_codes =  empty($form_codes) ? "All Codes" : $form_codes;
+$str_codes = "";
+$str_show_codes = "";
 
-(new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "age:" . $form_age_range, $from_date, $to_date, "codes:" .  $form_codes, "clear?" . $form_clear_codes, "user:" . $form_provider ));
+if (empty ($form_codes)) {
+    $str_codes = $str_show_codes = "All Codes";
+} else {
+  $str_codes = $form_codes;
+/* generate code + short description of selected codes to show to user */
+  $req_codes_array = explode(",", $form_codes);
+  $req_codes_descs_array = explode("\r\n,", $form_code_descriptions);
+  /* (new SystemLogger())->debug("descs: ", array($form_code_descriptions),$req_codes_descs_array); */
+  $count = count ($req_codes_array);
+  for ($i=0; $i < $count; $i++){
+             $str_show_codes .= $req_codes_array[$i] . ": " ;
+             $str_short = explode("(", $req_codes_descs_array[$i]);
+             $str_show_codes .= $str_short[0] . ";  " ;
+         }
+  }
+
+(new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "age:" . $form_age_range, $from_date, $to_date, "codes:" .  $form_codes, "descs:" . $form_code_descriptions, "clear?" . $form_clear_codes, "user:" . $form_provider ));
 
  if (empty($_POST['form_csvexport'])) { /* send javascript to client only if displaying, not if sending to csv file */
 
@@ -343,11 +358,16 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
         echo csvEscape(xl('Code set')) . ',';
           echo csvEscape(xl('Code')) . ',';
         echo csvEscape(xl('Description')) . "\n";
+
+    /* also record the codes that were used in the search, as the first line */
+     echo csvEscape($str_codes) . "\n";
+
     } else {
         ?>
         <br> To sort on other columns please use the CSV file.  &nbsp; &nbsp; &nbsp;
-            <?php  echo $str_code_instruction;  ?> </br>
-            <?php /* echo 'Chosen codes: ' . $str_codes; */ ?>
+            <?php  echo $str_code_instruction;  ?>
+            &nbsp; &nbsp; &nbsp;
+            <?php  echo 'Codes selected: ' . $str_show_codes;  ?> </br>
   <script>
      //   var sel = document.getElementById('form_age_range');
      //   val = sel.value
