@@ -44,21 +44,21 @@ $form_clear_codes = empty($_POST['form_clear_codes']) ? false : true;
 $form_codes = empty($_POST['form_codes']) ? 0 : $_POST['form_codes'];
 
 /* for debug */
-$sc =  !empty($_POST['form_selected_codes']) ? $_POST['form_selected_codes'] : 'none';
+/* $sc =  !empty($_POST['form_selected_codes']) ? $_POST['form_selected_codes'] : 'none';
 (new SystemLogger())->debug("received codes", array( $form_codes, $form_clear_codes ? "true" : "false", 'selected codes: ' . $sc));
-
+*/
 /* if we are to do a csv output, use the displayed codes */
 if ( !empty($_POST['form_csvexport'])) {
         $form_codes =  $_POST['form_selected_codes'] ? $_POST['form_selected_codes'] : $form_codes;
     }
 else { /*otherwise display results*/
          /* select codes takes preference over clear codes if both selected */
-            if (!$form_codes){
+         if (!$form_codes){
                 if(!$form_clear_codes && !empty ($_POST['form_selected_codes'])) {
                      $form_codes =  $_POST['form_selected_codes'] ;
                 }
             /* if other paramaters changed then codes comes in as 0, so use previous value */
-                }
+          }
   }
 
 $form_code_descriptions = empty($_POST['form_code_descriptions']) ? 0 : $_POST['form_code_descriptions'];
@@ -85,10 +85,11 @@ if (empty ($form_codes)) {
   /* (new SystemLogger())->debug("descs: ", array($form_code_descriptions),$req_codes_descs_array); */
   $count = count ($req_codes_array);
   for ($i=0; $i < $count; $i++){
-             $str_show_codes .= $req_codes_array[$i] . ": " ;
-             $str_short = explode("(", $req_codes_descs_array[$i]);
-             $str_show_codes .= $str_short[0] . ";  " ;
-         }
+       if ($i > 0 ){$str_show_codes .=  ";  " ;}
+       $str_show_codes .= $req_codes_array[$i] . ":" ;
+       $str_short = explode("(", $req_codes_descs_array[$i]);
+       $str_show_codes .= $str_short[0]  ;
+    }
   }
 
 (new SystemLogger())->debug("lets go: ",array("gender:" . $form_gender, "age:" . $form_age_range, $from_date, $to_date, "codes:" .  $form_codes, "descs:" . $form_code_descriptions, "clear?" . $form_clear_codes, "user:" . $form_provider ));
@@ -110,6 +111,7 @@ function selectCodes() {
  var form_code_list = [];
  var form_code_type_list = []
  var form_code_description_list = []
+
  // call back for select_codes
  function OnCodeSelected(codetype, code, selector, codedesc) {
  //   alert(codetype + " " + code + " " + selector + " " + codedesc)
@@ -287,21 +289,21 @@ $(function () {
              <input type='hidden' name='form_code_descriptions' id='form_code_descriptions' value='' />
              <div class="btn-group" role="group">
                 <a href='#' class='btn btn-secondary' style="margin-right:5px;" onclick='selectCodes();'> <?php echo xlt('select codes');?>  </a>
-                <td class='col-form-label'>
-                <?php  echo xlt('Selected Codes');  ?>
+               <!-- <td class='col-form-label'>
+                <?php  /* echo xlt('Selected Codes'); */ ?>
             </td>
                 <td>
-                  <select name="form_selected_codes" id="form_selected_codes" class="form-control">
+                -->
+                <input type='hidden' name="form_selected_codes" id="form_selected_codes" value="<?php echo ($form_codes); ?>" />
+                <!--  <select name="form_selected_codes" id="form_selected_codes" class="form-control">
                     <option value="<?php echo ($form_codes); ?>" selected > <?php echo $str_codes ;?> </option> </select>
+                    -->
                </td>
               <td class='col-form-label'>
-                <?php echo xlt('Clear Codes'); ?>:
+                <?php echo xlt('All Codes'); ?>:
             </td>
                 <td>
-                  <select name="form_clear_codes" id="form_clear_codes" class="form-control">
-                     <option value= "0" selected > keep code selection </option>
-                     <option value= "clear" > clear code selection </option>
-                     </select>
+                <input type = "checkbox" id="form_clear_codes" name="form_clear_codes" value = "clear" >
 
                 </div>
             </td>
