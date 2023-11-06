@@ -2,6 +2,7 @@
 
 /**
  * Version 1.0.0 October 2023
+ * Version 1.0.1 November 2023 - improved layout
  *
  * Report of use of diagnostic codes - with option to output as a csv file
  *
@@ -71,7 +72,7 @@ $report_title = xl("Diagnostic Code Use");
 // address for find code pop up
 $url = '';
 //strings
-$str_code_instruction = xlt("Please press 'Submit' to display results");
+$str_code_instruction = xlt("Press 'Submit' to display results");
 $str_codes = "";
 $str_show_codes = "";
 
@@ -85,8 +86,8 @@ if (empty ($form_codes)) {
   /* (new SystemLogger())->debug("descs: ", array($form_code_descriptions),$req_codes_descs_array); */
   $count = count ($req_codes_array);
   for ($i=0; $i < $count; $i++){
-       if ($i > 0 ){$str_show_codes .=  ";  " ;}
-       $str_show_codes .= $req_codes_array[$i] . ":" ;
+       if ($i > 0 ){$str_show_codes .=  "; " . "&nbsp; &nbsp;" ;}
+       $str_show_codes .= $req_codes_array[$i] . ": &nbsp;" ;
        $str_short = explode("(", $req_codes_descs_array[$i]);
        $str_show_codes .= $str_short[0]  ;
     }
@@ -204,7 +205,7 @@ $(function () {
 <!-- Required for the popup date selectors -->
 <div id="overDiv" style="position: absolute; visibility: hidden; z-index: 1000;"></div>
 
-<span class='title'><?php echo xlt('Report'); ?> - <?php echo text($report_title);   ?></span>
+<span class='title'><?php echo xlt('Report'); ?> &ndash; <?php echo text($report_title);   ?></span>
 
 <div id="report_parameters_daterange">
     <?php if (!(empty($to_date) && empty($from_date))) {
@@ -288,7 +289,7 @@ $(function () {
              <input type='hidden' name='form_code_types' id='form_code_types' value='' />
              <input type='hidden' name='form_code_descriptions' id='form_code_descriptions' value='' />
              <div class="btn-group" role="group">
-                <a href='#' class='btn btn-secondary' style="margin-right:5px;" onclick='selectCodes();'> <?php echo xlt('select codes');?>  </a>
+                <a href='#' class='btn btn-secondary' style="margin-right:5px;" onclick='selectCodes();'> <?php echo xlt('Select Codes');?>  </a>
                <!-- <td class='col-form-label'>
                 <?php  /* echo xlt('Selected Codes'); */ ?>
             </td>
@@ -303,8 +304,8 @@ $(function () {
                 <?php echo xlt('All Codes'); ?>:
             </td>
                 <td>
-                <input type = "checkbox" id="form_clear_codes" name="form_clear_codes" value = "clear" >
-
+                 <input type = "checkbox" id="form_clear_codes" name="form_clear_codes" value = "clear" >
+        <!--    <input type = "checkbox" id="form_clear_codes" name="form_clear_codes" checked = <?php /* echo $form_codes ? 'clear' : 'checked' */ ?> /> -->
                 </div>
             </td>
         </tr>
@@ -349,12 +350,13 @@ $(function () {
 if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
     if ($_POST['form_csvexport']) {
         // CSV headers:
-        echo csvEscape(xl('ID')) . ',';
+
         echo csvEscape(xl('Issue Date')) . ',';
         echo csvEscape(xl('Provider')) . ',';
         echo csvEscape(xl('Patient Last Name')) . ',';
         echo csvEscape(xl('Paient First Name')) . ',';
         echo csvEscape(xl('Paient Middle Name')) . ',';
+        echo csvEscape(xl('ID')) . ',';
         echo csvEscape(xl('Date of Birth')) . ',';
         echo csvEscape(xl('Gender')) . ',';
         echo csvEscape(xl('Code set')) . ',';
@@ -363,13 +365,14 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
 
     /* also record the codes that were used in the search, as the first line */
      echo csvEscape($str_codes) . "\n";
-
     } else {
         ?>
+        <strong>
+            <?php  echo 'Codes selected: ' . "</strong>" . $str_show_codes;  ?> </br>
+         &nbsp; &nbsp; &nbsp;
         <br> To sort on other columns please use the CSV file.  &nbsp; &nbsp; &nbsp;
-            <?php  echo $str_code_instruction;  ?>
-            &nbsp; &nbsp; &nbsp;
-            <?php  echo 'Codes selected: ' . $str_show_codes;  ?> </br>
+            <?php /*  echo $str_code_instruction; */ ?>
+
   <script>
      //   var sel = document.getElementById('form_age_range');
      //   val = sel.value
@@ -380,10 +383,11 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
   <div id="report_results">
   <table class='table' id='mymaintable'>
    <thead class='thead-light'>
-    <th> <?php echo xlt('ID'); ?> </th>
+
     <th> <?php echo xlt('Issue Date'); ?> </th>
     <th> <?php echo xlt('Provider'); ?> </th>
     <th> <?php echo xlt('Patient'); ?> </th>
+    <th> <?php echo xlt('ID'); ?> </th>
     <th> <?php echo xlt('Date of Birth'); ?> </th>
     <th> <?php echo xlt('Gender'); ?> </th>
     <th> <?php echo xlt('Code Set'); ?> </th>
@@ -524,13 +528,13 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             $drow = sqlFetchArray($dres);
 
             if ($_POST['form_csvexport']) {
-                echo csvEscape($row['pubpid']) . ',';
                 // format dates by users preference
                 echo csvEscape(oeFormatDateTime($row['date'], "global", false)) . ',';
                 echo csvEscape($prfname . " " . $prlname) . ',';
                 echo csvEscape($row['lname']) . ',';
                 echo csvEscape($row['fname']) . ',';
                 echo csvEscape($row['mname']) . ',';
+                echo csvEscape($row['pubpid']) . ',';
                 echo csvEscape(oeFormatShortDate(substr($row['DOB'], 0, 10))) . ',';
                 echo csvEscape($row['sex'] === 'UNK' ? 'Unknown' : $row['sex']) . ',';
                 echo csvEscape($crow['ct_label']) . ',';
@@ -539,18 +543,18 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
             } else {
             ?>
         <tr>
-            <td>
-                <?php echo text($row['pubpid']); ?>
-            </td>
+
             <td>
                 <?php echo text(oeFormatShortDate($row['date'], "global", false)) ;?>
             </td>
             <td>
                 <?php echo text($prfname . " " . $prlname); ?>
             </td>
-
             <td>
                 <?php echo text($row['lname'] . ', ' . $row['fname'] . ' ' . $row['mname']); ?>
+            </td>
+            <td>
+                <?php echo text($row['pubpid']); ?>
             </td>
             <td>
                 <?php echo text(oeFormatShortDate(substr($row['DOB'], 0, 10))); ?>
