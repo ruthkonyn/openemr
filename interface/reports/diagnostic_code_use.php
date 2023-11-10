@@ -370,7 +370,7 @@ if (!empty($_POST['form_refresh']) || !empty($_POST['form_csvexport'])) {
         <strong>
             <?php  echo 'Codes selected: ' . "</strong>" . $str_show_codes;  ?> </br>
          &nbsp; &nbsp; &nbsp;
-        <br> To sort on other columns please use the CSV file.  &nbsp; &nbsp; &nbsp;
+        <br> To sort on columns other than patient surname, please use the CSV file.  &nbsp; &nbsp; &nbsp; </br>
             <?php /*  echo $str_code_instruction; */ ?>
 
   <script>
