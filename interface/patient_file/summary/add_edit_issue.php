@@ -3,6 +3,10 @@
 /**
  * add or edit a medical problem.
  *
+ *  Ruth Moulton
+ * new issue form type 'Problem' added with reduced number of items displayed
+ * version 1.0 November 2013
+ *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
  * @author    Rod Roark <rod@sunsetsystems.com>
@@ -26,6 +30,8 @@ use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Core\Header;
 use OpenEMR\MedicalDevice\MedicalDevice;
 use OpenEMR\Services\PatientIssuesService;
+
+use OpenEMR\Common\Logging\SystemLogger;
 
 // TBD - Resolve functional issues if opener is included in Header
 ?>
@@ -78,6 +84,7 @@ function QuotedOrNull($fld)
     return ($fld) ? "'" . add_escape_custom($fld) . "'" : "NULL";
 }
 
+// radio button generation
 function rbinput($name, $value, $desc, $colname)
 {
     global $irow;
@@ -399,6 +406,7 @@ function getCodeText($code)
     <?php
     $i = 0;
     foreach ($ISSUE_TYPES as $key => $value) {
+         /* form style: 0 standard, 1 simplified, 2 football injury, 5 Problem*/
         echo " aitypes[" . attr($i) . "] = " . js_escape($value[3]) . ";\n";
         echo " aopts[" . attr($i) . "] = new Array();\n";
         $qry = sqlStatement(
@@ -468,17 +476,22 @@ function getCodeText($code)
         //
         // Show or hide various rows depending on issue type, except do not
         // hide the comments or referred-by fields if they have data.
+	// types: 0 standard, 1 simplified, 2 football injury, 3 abortion, 4 contraception, 5 Problem
 
         $(function() {
             var comdisp = (aitypes[index] == 1) ? 'none' : '';
             var revdisp = (aitypes[index] == 1) ? '' : 'none';
             var injdisp = (aitypes[index] == 2) ? '' : 'none';
             var nordisp = (aitypes[index] == 0) ? '' : 'none';
+	    // problem issue tupe - a cut down version of the form - rm
+	    var pdisp = (aitypes[index] == 5) ? 'none' : '';
             // reaction row should be displayed only for medication allergy.
             var alldisp = (index == <?php echo issueTypeIndex('allergy'); ?>) ? '' : 'none';
             var verificationdisp = (index == <?php echo issueTypeIndex('medical_problem'); ?>) ||
                 (index == <?php echo issueTypeIndex('allergy'); ?>) ? '' : 'none';
-            document.getElementById('row_enddate').style.display = comdisp;
+            var disp = (comdisp == 'none' || pdisp == 'none') ? 'none' : '';  // simplified or problem
+          //  document.getElementById('row_enddate').style.display = comdisp;
+            document.getElementById('row_enddate').style.display = disp; // only display if neither Simplified or Problem
             // Note that by default all the issues will not show the active row
             //  (which is desired functionality, since then use the end date
             //   to inactivate the item.)
@@ -486,13 +499,20 @@ function getCodeText($code)
             document.getElementById('row_selected_codes').style.display = comdisp;
             document.getElementById('row_occurrence').style.display = comdisp;
             document.getElementById('row_classification').style.display = injdisp;
+               document.getElementById('row_subtype').style.display = pdisp;
             document.getElementById('row_reinjury_id').style.display = injdisp;
             document.getElementById('row_severity').style.display = alldisp;
             document.getElementById('row_reaction').style.display = alldisp;
             document.getElementById('row_verification').style.display = verificationdisp;
             document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : comdisp;
             //document.getElementById('row_comments'      ).style.display = (f.form_comments.value) ? '' : revdisp;
-            document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : comdisp;
+           // document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : comdisp;
+            document.getElementById('row_referredby').style.display = (f.form_referredby.value) ? '' : disp;
+             document.getElementById('row_destination').style.display = pdisp;
+            document.getElementById('add_title').style.display = pdisp;
+	    // don't use toggle more/less for problem
+	    document.getElementById ('more_fields').style.display = pdisp;
+            document.getElementById('expanded_options').className = (pdisp == 'none' ) ? '' : 'collapse' ;
         });
         <?php
         if (!empty($ISSUE_TYPES['ippf_gcac']) && empty($_POST['form_save'])) {
@@ -802,6 +822,7 @@ function getCodeText($code)
                                     <label><?php echo xlt('Type'); ?>:</label>
                                     <?php
                                     $index = 0;
+                                    /* display radio button for each active issue type, if needed */
                                     foreach ($ISSUE_TYPES as $key => $value) {
                                         if ($issue || $thistype) {
                                             if ($index == $type_index) {
@@ -813,6 +834,7 @@ function getCodeText($code)
                                             $disabled = (!AclMain::aclCheckIssue($key, '', ['write', 'addonly'])) ? " disabled" : '';
                                             $str = '<input type="radio" name="form_type" value="%s" onclick="newtype(%s)" %s %s>';
                                             echo vsprintf($str, [attr($index), attr_js($index), $checked, $disabled]);
+                                            echo text($value[1] . " "); /* rm - display issue type name */
                                         }
 
                                         ++$index;
@@ -828,11 +850,16 @@ function getCodeText($code)
                         </div>
                         <div class="row">
                             <div class="form-group col" id='row_titles'>
-                                <label for="form_titles" class=""><?php echo xlt('Select from list or type your own in Title'); ?></label>
+
+                            <div class="form-group col" id = 'select-code-for-title'>
+
+                                <label for="form_titles" class=""><?php echo xlt('Select Title from list'); ?></label>
                                 <select name='form_titles' id='form_titles' class="form-control select2" multiple onchange='set_text()'><option></option></select>
                             </div>
                             <div class="form-group col">
-                                <label for="title_diagnosis"><?php echo xlt('Title'); ?>:</label>
+                             <!--   <label for="title_diagnosis"><?php echo xlt('Title'); ?>:</label> -->
+                                <label for="title_diagnosis"><?php echo xlt('or type your own Title here'); ?>:</label>
+
                                 <div class="input-group">
                                     <input type='text' class="form-control" name='form_title' id='form_title' value='<?php echo attr($irow['title'] ?? '') ?>' />
                                     <div class="input-group-append">
