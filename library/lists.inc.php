@@ -60,7 +60,8 @@ $ISSUE_TYPE_STYLES = array(
   1 => xl('Simplified'),                  // Simplified: only title, start date, comments and an Active checkbox;no diagnosis, occurrence, end date, referred-by or sports fields.
   2 => xl('Football Injury'),             // Football Injury
   3 => xl('IPPF Abortion'),               // IPPF specific (abortions issues)
-  4 => xl('IPPF Contraception')           // IPPF specific (contraceptions issues)
+  4 => xl('IPPF Contraception'),           // IPPF specific (contraceptions issues)
+  5 => xl('Problem')                    // cut down form - rm
 );
 
 /**

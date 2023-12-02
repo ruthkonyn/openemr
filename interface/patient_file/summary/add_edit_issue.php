@@ -483,7 +483,7 @@ function getCodeText($code)
             var revdisp = (aitypes[index] == 1) ? '' : 'none';
             var injdisp = (aitypes[index] == 2) ? '' : 'none';
             var nordisp = (aitypes[index] == 0) ? '' : 'none';
-	    // problem issue tupe - a cut down version of the form - rm
+	    // problem issue type 5 - a cut down version of the form - rm
 	    var pdisp = (aitypes[index] == 5) ? 'none' : '';
             // reaction row should be displayed only for medication allergy.
             var alldisp = (index == <?php echo issueTypeIndex('allergy'); ?>) ? '' : 'none';
@@ -851,12 +851,10 @@ function getCodeText($code)
                         <div class="row">
                             <div class="form-group col" id='row_titles'>
 
-                            <div class="form-group col" id = 'select-code-for-title'>
-
                                 <label for="form_titles" class=""><?php echo xlt('Select Title from list'); ?></label>
                                 <select name='form_titles' id='form_titles' class="form-control select2" multiple onchange='set_text()'><option></option></select>
                             </div>
-                            <div class="form-group col">
+                            <div class="form-group col" id='add_title'>
                              <!--   <label for="title_diagnosis"><?php echo xlt('Title'); ?>:</label> -->
                                 <label for="title_diagnosis"><?php echo xlt('or type your own Title here'); ?>:</label>
 
@@ -923,8 +921,8 @@ function getCodeText($code)
                                 <textarea class="form-control" name='form_comments' id='form_comments' rows="2" id='form_comments'><?php echo text($irow['comments'] ?? '') ?></textarea>
                             </div>
                         </div>
-                        <div id="expanded_options" class="collapse">
-                            <div class="row">
+                        <!-- div id="expanded_options" class="collapse" -->
+                        <div id="expanded_options" >
                                 <div class="form-group col-sm-12 col-md-6" id='row_active_codes'>
                                     <label for="form_active_codes" class="col-form-label"><?php echo xlt('Active Issue Codes'); ?>:</label>
                                     <select name='form_active_codes' id='form_active_codes' class= "form-control" size='4'
@@ -1001,7 +999,7 @@ function getCodeText($code)
                                     <label class="col-form-label" for="form_referredby"><?php echo xlt('Referred by'); ?>:</label>
                                     <input type='text' name='form_referredby' id='form_referredby' class='form-control' value='<?php echo attr($irow['referredby'] ?? '') ?>' title='<?php echo xla('Referring physician and practice'); ?>' />
                                 </div>
-                                <div class="form-group col-sm-12 col-md-4 <?php echo ($GLOBALS['ippf_specific']) ? 'd-none' : ''; ?>">
+                                <div class="form-group col-sm-12 col-md-4 <?php echo ($GLOBALS['ippf_specific']) ? 'd-none' : ''; ?>" id="row_destination">
                                     <label class="col-form-label" for="form_destination"><?php echo xlt('Destination'); ?>:</label>
                                     <?php if (true) { ?>
                                         <input type='text' class='form-control' name='form_destination' id='form_destination' value='<?php echo attr($irow['destination'] ?? '') ?>' style='width:100%' title='GP, Secondary care specialist, etc.' />
@@ -1024,7 +1022,7 @@ function getCodeText($code)
                         </div>
                         <div class="row">
                             <div class="col d-flex justify-content-end">
-                                <button type="button" class="btn btn-text mr-3" data-toggle="collapse" data-target="#expanded_options" aria-expanded="false" aria-controls="expanded_options"><?php echo xlt("Show More Fields"); ?>&nbsp;<i class="fa fa-angles-down"></i></button>
+                                <button type="button" class="btn btn-text mr-3" data-toggle="collapse" data-target="#expanded_options" aria-expanded="false" aria-controls="expanded_options" id="more_fields"><?php echo xlt("Show More Fields"); ?>&nbsp;<i class="fa fa-angles-down"></i></button>
                                 <div class="btn-group" role="group">
                                     <button type='submit' name='form_save' value="<?php echo xla('Save'); ?>" class="btn btn-primary btn-save"><?php echo xlt('Save'); ?></button>
                                     <button type="button" class="btn btn-secondary btn-cancel" onclick='closeme();'><?php echo xlt('Cancel'); ?></button>
