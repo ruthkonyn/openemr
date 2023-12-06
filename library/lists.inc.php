@@ -3,6 +3,10 @@
 /**
  * Issue list functions and data structure building.
  *
+ *  Ruth Moulton
+ *  add 'Problem' style for a cut down form. Index value 5
+ *  Version 1.0.0
+ *
  * The data structure is the $ISSUE_TYPES array.
  * The $ISSUE_TYPES array is built from the issue_types sql table and provides
  * abstraction of issue types to allow customization.
