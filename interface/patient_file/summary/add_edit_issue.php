@@ -923,6 +923,7 @@ function getCodeText($code)
                         </div>
                         <!-- div id="expanded_options" class="collapse" -->
                         <div id="expanded_options" >
+                            <div calss="row" >
                                 <div class="form-group col-sm-12 col-md-6" id='row_active_codes'>
                                     <label for="form_active_codes" class="col-form-label"><?php echo xlt('Active Issue Codes'); ?>:</label>
                                     <select name='form_active_codes' id='form_active_codes' class= "form-control" size='4'
@@ -1019,6 +1020,7 @@ function getCodeText($code)
                                     <img id='img_return' />
                                 </div>
                             </div>
+                        </div>
                         </div>
                         <div class="row">
                             <div class="col d-flex justify-content-end">
