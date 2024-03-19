@@ -28,6 +28,7 @@ use OpenEMR\Billing\BillingUtilities;
 use OpenEMR\Billing\InvoiceSummary;
 use OpenEMR\Common\Csrf\CsrfUtils;
 use OpenEMR\Core\Header;
+use OpenEMR\Common\Logging\SystemLogger;
 
 $is_group = ($attendant_type == 'gid') ? true : false;
 
@@ -180,6 +181,12 @@ function generatePageElement($start, $pagesize, $billing, $issue, $text)
 <script src="<?php echo $GLOBALS['webroot'] ?>/library/js/ajtooltip.js"></script>
 
 <script>
+
+$(function () {
+   // print the history - as displayed
+    top.printLogSetup(document.getElementById('printbutton'));
+});
+
 // open dialog to edit an invoice w/o opening encounter.
 function editInvoice(e, id) {
     e.stopPropagation();
@@ -272,6 +279,10 @@ window.onload = function() {
     <?php } else { ?>
         <a href='encounters.php?billing=1&issue=<?php echo $issue . $getStringForPage; ?>' class="btn btn-small btn-info" onclick='top.restoreSession()' style='font-size: 11px'><?php echo xlt('To Billing View'); ?></a>
     <?php } ?>
+
+     <a  href='#' id='printbutton' class='btn btn-secondary btn-print'>
+                            <?php echo xlt('Print'); ?>
+       </a>
 
     <span class="float-right">
         <?php echo xlt('Results per page'); ?>:
