@@ -2,6 +2,8 @@
 
 /**
  * Encounter list.
+ *  rm: print button to print page; include patients name and dob on the page
+ * version 1.0.0
  *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
@@ -279,10 +281,8 @@ window.onload = function() {
     <?php } else { ?>
         <a href='encounters.php?billing=1&issue=<?php echo $issue . $getStringForPage; ?>' class="btn btn-small btn-info" onclick='top.restoreSession()' style='font-size: 11px'><?php echo xlt('To Billing View'); ?></a>
     <?php } ?>
-
-     <a  href='#' id='printbutton' class='btn btn-secondary btn-print'>
-                            <?php echo xlt('Print'); ?>
-       </a>
+    &nbsp; &nbsp;
+     <a  href='#' id='printbutton' class='btn btn-secondary btn-print'>  <?php echo xlt('Print page'); ?>   </a>
 
     <span class="float-right">
         <?php echo xlt('Results per page'); ?>:
@@ -308,6 +308,13 @@ window.onload = function() {
     </span>
 
     <br />
+    <span class="heading" >
+    <?php
+        $name =  getPatientNameFirstLast($pid);
+        $dob =  text(oeFormatShortDate(getPatientData($pid, "DOB")['DOB']));
+        echo $name . " &nbsp;  &nbsp; DOB: " . $dob ;
+        ?>
+    </span>
 
     <div class="table-responsive">
         <table class="table table-hover jumbotron py-4 mt-3">
@@ -379,7 +386,8 @@ window.onload = function() {
                 $drow = sqlFetchArray($dres);
             }
 
-            // $count = 0;
+            $numRes = 0;
+(new SystemLogger())->debug("size, start, numRes", array( $pagesize, $pagestart, $numRes));
 
             $sqlBindArray = array();
             if ($attendant_type == 'pid') {
@@ -412,7 +420,7 @@ window.onload = function() {
 
             $countRes = sqlStatement($countQuery, $sqlBindArray);
             $count = sqlFetchArray($countRes);
-            $numRes = $count['c'];
+            $numRes += $count['c'];
 
 
             if ($pagesize > 0) {
@@ -471,7 +479,11 @@ window.onload = function() {
 
                     // This generates document lines as appropriate for the date order.
                 while ($drow && $raw_encounter_date && $drow['docdate'] > $raw_encounter_date) {
-                    showDocument($drow);
+                    $numRes++;
+                    (new SystemLogger())->debug(" generate: size, start, numRes", array( $pagesize, $pagestart, $numRes));
+                   if ($numRes <= $pagesize){
+                        showDocument($drow);
+                   }
                     $drow = sqlFetchArray($dres);
                 }
 
@@ -824,7 +836,8 @@ window.onload = function() {
             } // end while
 
             // Dump remaining document lines if count not exceeded.
-            while ($drow /* && $count <= $N */) {
+            while ($drow  && $numRes <= $pagesize) {
+                $numRes++;
                 showDocument($drow);
                 $drow = sqlFetchArray($dres);
             }
