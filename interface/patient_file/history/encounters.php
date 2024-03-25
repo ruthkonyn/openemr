@@ -2,8 +2,11 @@
 
 /**
  * Encounter list.
- *  rm: print button to print page; include patients name and dob on the page
  * version 1.0.0
+ *  rm: print button to print page; include patients name and dob on the page
+ * version 2.0.0
+ * fix doc bugs  - each document displayed only once
+ *
  *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
@@ -107,7 +110,7 @@ function getDocListByEncID($encounter, $raw_encounter_date, $pid)
             echo "<a href='$docHref' onclick='top.restoreSession()' >" . xlt('Document') . ": " . text($documentrow['document_name'])  . '-' . $documentrow['id'] . ' (' . text(xl_document_category($documentrow['name'])) . ')' . "</a>";
             echo "</div>";
 
-            //RM include in count of docs already shown
+            //RM include in count of docs  shown on this page
             $docsshown++;
         }
     }
@@ -122,14 +125,8 @@ function showDocument(&$drow)
 
     $docdate = $drow['docdate'];
 
-     (new SystemLogger())->debug("showdoc docDisplayed and element for ", array($drow['id'], $docDisplayed, $docDisplayed[$drow['id']] ) );
+  //RM   (new SystemLogger())->debug("showdoc docDisplayed and element for ", array($drow['id'], $docDisplayed, $docDisplayed[$drow['id']] ) );
 
-    //RM if the document has already been displayed then return
-     if ( $docDisplayed[$drow['id']] == 1  ){
-               // $testvar = strval($drow['id']);
-        (new SystemLogger())->debug("return because:", array($docDisplayed[$drow['id']], $drow['id'] ) );
-          return;
-     }
     // if doc is already tagged by encounter it already has its own row so return
     $doc_tagged_enc = $drow['encounter_id'];
     if ($doc_tagged_enc) {
@@ -167,24 +164,27 @@ function showDocument(&$drow)
     echo "<td colspan='5'>&nbsp;</td>\n";
     echo "</tr>\n";
 
-        // RM count how many displayed
+        // RM count how many displayed on this page
     $docsshown++;
 }
 
 
-function generatePageElement($start, $pagesize, $billing, $issue, $docsshown, $text)
+function generatePageElement($start, $pagesize, $billing, $issue,  $pageno, $docsoffsets, $text)
 {
+
     if ($start < 0) {
         $start = 0;
     }
     $url = "encounters.php?pagestart=" . attr_url($start) . "&pagesize=" . attr_url($pagesize);
     $url .= "&billing=" . attr_url($billing);
     $url .= "&issue=" . attr_url($issue);
-    $url .= "&docsshown=" . attr_url($docsshown);
+    $url .= "&pageno=" . attr_url($pageno);
+    $url .= "&" . http_build_query($docsoffsets, "offsets"); //include record of number of docs displayed on each page
+
+(new SystemLogger())->debug("url  and docs array", array($url, $docsoffsets) );
 
     echo "<a href='" . $url . "' onclick=' top.restoreSession()'  id='nextbutton' > " . $text . "  </a>";
 }
-
 
 
 ?>
@@ -276,11 +276,24 @@ window.onload = function() {
         echo "</body>\n</html>\n";
         exit();
     }
-    //RM where to start with list of docs
+    //RM count of docs shown on current page
     $docsshown = 0;
-    if (isset ($_GET['docsshown'])) {
-        $docsshown = $_GET['docsshown'];
+
+ //RM where to start with list of docs
+    $pageno = 0;
+     if (isset ($_GET['pageno'])) {
+        $pageno = $_GET['pageno'];
     }
+
+    $docsoffsets = array(0);
+    for ($i = 1; $i <= $pageno; $i++){
+        $getstring = 'offsets' . strval($i);
+    //   if (isset($_GET[$getstsring])) { //RM why does this always return false?
+          (new SystemLogger())->debug(" GET parameter" , array($_GET[$getstring]) );
+        array_push($docsoffsets, $_GET[$getstring]);  //build the array of offsets for each page
+    //    }
+    }
+  (new SystemLogger())->debug("page no; i; docs per page AFTER ", array($pageno, $i, $docsoffsets) );
 
     $pagestart = 0;
     if (isset($_GET['pagesize'])) {
@@ -307,7 +320,7 @@ window.onload = function() {
         <a href='encounters.php?billing=1&issue=<?php echo $issue . $getStringForPage; ?>' class="btn btn-small btn-info" onclick='top.restoreSession()' style='font-size: 11px'><?php echo xlt('To Billing View'); ?></a>
     <?php } ?>
 
-    <!-- RM add a print button, to only print the history -->
+    <!-- RM add a print button, to print only the history -->
     &nbsp; &nbsp;
      <a  href='#' id='printbutton' class='btn btn-secondary btn-print'>  <?php echo xlt('Print page'); ?>   </a>
 
@@ -411,9 +424,12 @@ window.onload = function() {
                     $queryarr[] = $issue;
                 }
                 $query .= "ORDER BY d.docdate DESC, d.id DESC";
+                (new SystemLogger())->debug("page no, offsets", array( $pageno, $docsoffsets));
+
                 //RM start after  docs already displayed
                 if ($pagesize > 0) {
-                    $query .= " LIMIT " . $pagesize . " OFFSET  " .  $docsshown;
+
+                    $query .= " LIMIT " . $pagesize . " OFFSET  " .  $docsoffsets[$pageno];
                 }
                 $dres = sqlStatement($query, $queryarr);
                 $drow = sqlFetchArray($dres);
@@ -475,18 +491,17 @@ window.onload = function() {
 
 
             if (($pagesize > 0) && ($pagestart > 0)) {
-                generatePageElement($pagestart - $pagesize, $pagesize, $billing_view, $issue, $docsshown, "&lArr;" . htmlspecialchars(xl("Prev"), ENT_NOQUOTES) . " ");
+                generatePageElement($pagestart - $pagesize, $pagesize, $billing_view, $issue, $pageno-1, $docsoffsets, "&lArr;" . htmlspecialchars(xl("Prev"), ENT_NOQUOTES) . " ");
             }
             echo ($pagestart + 1) . "-" . $upper . " " . htmlspecialchars(xl('of'), ENT_NOQUOTES) . " " . $numRes;
 
-            // RM add number of docs shown to GET values
+            // RM add number of docs shown to GET values - moved this code till after everything is displayed, so we can put the actual
+            //number of documents displayed into the GET parameters - so the docs don't get repeated
           //  if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
             //    generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, $docsshown, " " . htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
         //    }
 
-
             $res4 = sqlStatement($query, $sqlBindArray);
-
 
             while ($result4 = sqlFetchArray($res4)) {
                     // $href = "javascript:window.toencounter(" . $result4['encounter'] . ")";
@@ -874,16 +889,19 @@ window.onload = function() {
                     echo "</tr>\n";
             } // end while
 
-            // Dump remaining document lines if count not exceeded
+            // Dump remaining document lines if count not exceeded - but only if room on the page.
            while ($drow  ) {
                 showDocument($drow);
                 $drow = sqlFetchArray($dres);
             }
 
-            // update get parameters with the document count
-             // RM add number of docs shown to GET values
+            // update $GET parameters with the document count
+             // RM add number of docs shown to GET values and show values for the next page
+
+              $docsoffsets[$pageno+1] = $docsoffsets[$pageno] + $docsshown ; // add the number of docs displayed on this page to offset for the next one
+
             if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
-                generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, $docsshown, " " . htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
+                generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, $pageno+1, $docsoffsets, " " . htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
             }
 
             ?>
