@@ -6,7 +6,13 @@
  *  rm: print button to print page; include patients name and dob on the page
  * version 2.0.0
  * fix doc bugs  - each document displayed only once
- *
+ * one must keep separate stats for docs and encounters to make going forward and back (next, prev) through the pages work correctly - until now the fact that documents were displayed was somewhat ignored, e.g. in page size as set in results per page. So variable names such as $pagestart is misleading, it only refers to encounters, and is used when searching as an offset.
+ * version 2.0.1
+ * add patient ID to heading of visit history display
+ * version 2.0.2
+ * use pubpid as the ID in the heading
+ * version 2.1.0
+ * page length is as chosen, prev and next buttons work correctly taking documents and encounters into account
  *
  * @package   OpenEMR
  * @link      http://www.open-emr.org
@@ -78,7 +84,7 @@ if (isset($_GET['billing'])) {
 function getDocListByEncID($encounter, $raw_encounter_date, $pid)
 {
     global $ISSUE_TYPES, $auth_med;
-    global $docsshown;
+    global $docsshown, $linesleft;
 
     $documents = getDocumentsByEncounter($pid, $encounter);
     if (!empty($documents) && count($documents) > 0) {
@@ -121,13 +127,11 @@ function getDocListByEncID($encounter, $raw_encounter_date, $pid)
 function showDocument(&$drow)
 {
    global $ISSUE_TYPES, $auth_med, $docDisplayed;
- global $docsshown;
+ global $docsshown, $linesleft;
 
     $docdate = $drow['docdate'];
 
-  //RM   (new SystemLogger())->debug("showdoc docDisplayed and element for ", array($drow['id'], $docDisplayed, $docDisplayed[$drow['id']] ) );
-
-    // if doc is already tagged by encounter it already has its own row so return
+    // if doc is already tagged by encounter it will be displayed in it's encounter's row
     $doc_tagged_enc = $drow['encounter_id'];
     if ($doc_tagged_enc) {
         return;
@@ -165,23 +169,25 @@ function showDocument(&$drow)
     echo "</tr>\n";
 
         // RM count how many displayed on this page
-    $docsshown++;
+    $docDisplayed++;     //number of docs on their own line
+    $docsshown++;          // number of docs shown all together - including tagged, i.e. use as offset next time
+    $linesleft--;
 }
 
 
-function generatePageElement($start, $pagesize, $billing, $issue,  $pageno, $docsoffsets, $text)
+function generatePageElement($start, $pagesize, $encoffsets,  $billing, $issue,  $pageno, $docoffsets,  $text)
 {
-
-    if ($start < 0) {
+   if ($start < 0) {
         $start = 0;
     }
+
     $url = "encounters.php?pagestart=" . attr_url($start) . "&pagesize=" . attr_url($pagesize);
+
     $url .= "&billing=" . attr_url($billing);
     $url .= "&issue=" . attr_url($issue);
     $url .= "&pageno=" . attr_url($pageno);
-    $url .= "&" . http_build_query($docsoffsets, "offsets"); //include record of number of docs displayed on each page
-
-(new SystemLogger())->debug("url  and docs array", array($url, $docsoffsets) );
+    $url .= "&" . http_build_query($docoffsets, "dos"); //include record of number of docs displayed on each page
+    $url .= "&" . http_build_query($encoffsets, "enos") ;
 
     echo "<a href='" . $url . "' onclick=' top.restoreSession()'  id='nextbutton' > " . $text . "  </a>";
 }
@@ -206,7 +212,7 @@ function generatePageElement($start, $pagesize, $billing, $issue,  $pageno, $doc
 
 $(function () {
    // print the history - as displayed
-    top.printLogSetup(document.getElementById('printbutton'));
+    top.printLogSetup(document.getElementById('printbutton'), "logdata");
 });
 
 // open dialog to edit an invoice w/o opening encounter.
@@ -279,37 +285,43 @@ window.onload = function() {
     //RM count of docs shown on current page
     $docsshown = 0;
 
- //RM where to start with list of docs
-    $pageno = 0;
+     $pageno = 0;
      if (isset ($_GET['pageno'])) {
         $pageno = $_GET['pageno'];
     }
 
-    $docsoffsets = array(0);
+//RM where to start with list of docs
+    $docoffsets = array(0);
     for ($i = 1; $i <= $pageno; $i++){
-        $getstring = 'offsets' . strval($i);
-    //   if (isset($_GET[$getstsring])) { //RM why does this always return false?
-          (new SystemLogger())->debug(" GET parameter" , array($_GET[$getstring]) );
-        array_push($docsoffsets, $_GET[$getstring]);  //build the array of offsets for each page
-    //    }
+        $getstring = 'dos' . strval($i);
+        $DF = empty($_GET[$getstring]) ? 0 :  $_GET[$getstring];
+         array_push($docoffsets, $DF );  //build the array of offsets for each page
     }
-  (new SystemLogger())->debug("page no; i; docs per page AFTER ", array($pageno, $i, $docsoffsets) );
 
-    $pagestart = 0;
     if (isset($_GET['pagesize'])) {
         $pagesize = $_GET['pagesize'];
     } else {
-        if (array_key_exists('encounter_page_size', $GLOBALS)) {
+        if (array_key_exists('encounter_page_size', $GLOBALS)) { // admin/config/encounter
             $pagesize = $GLOBALS['encounter_page_size'];
         } else {
             $pagesize = 0;
         }
     }
-    if (isset($_GET['pagestart'])) {
-        $pagestart = $_GET['pagestart'];
-    } else {
-        $pagestart = 0;
+
+    $linesleft = $pagesize; //RM lines left on the page - to start with the whole page
+
+    $encoffsets = array (0); // where to start with encounters for this page, i.e.  OFFSET when searching for them - doesn't include docs
+    //RM - need to keep an array of these as well, for going back more than once
+  for ($i = 1; $i <= $pageno; $i++){
+        $getstring = 'enos' . strval($i);
+        $DF = empty($_GET[$getstring]) ? 0 :  $_GET[$getstring];
+         array_push($encoffsets, $DF );  //build the array of offsets for each page
     }
+    $pagestart = $encoffsets[$pageno];
+
+    (new SystemLogger())->debug("327 GET params, start,size,prevencs,docs,page" , array($_GET, $pagestart, $pagesize, $encoffsets, $docoffsets, $pageno) );
+
+    //RM *** need to add in the document and encounter offsets
     $getStringForPage = "&pagesize=" . attr_url($pagesize) . "&pagestart=" . attr_url($pagestart);
 
     ?>
@@ -348,12 +360,14 @@ window.onload = function() {
     </span>
 
     <br />
-    <!-- RM put patienes name and dob at top of the history -->
+
     <span class="heading" >
     <?php
+   // RM put patient's name external id = pubpid in db record, and dob at top of the history
         $name =  getPatientNameFirstLast($pid);
         $dob =  text(oeFormatShortDate(getPatientData($pid, "DOB")['DOB']));
-        echo $name . " &nbsp;  &nbsp; DOB: " . $dob ;
+        $external_id = getPatientData($pid, "pubpid")['pubpid'];
+        echo $name . " (" . $external_id . ")" .  "&nbsp;  &nbsp; DOB: " . $dob ;
         ?>
     </span>
 
@@ -424,12 +438,12 @@ window.onload = function() {
                     $queryarr[] = $issue;
                 }
                 $query .= "ORDER BY d.docdate DESC, d.id DESC";
-                (new SystemLogger())->debug("page no, offsets", array( $pageno, $docsoffsets));
+                (new SystemLogger())->debug("441 page no, offsets", array( $pageno, $docoffsets));
 
                 //RM start after  docs already displayed
                 if ($pagesize > 0) {
 
-                    $query .= " LIMIT " . $pagesize . " OFFSET  " .  $docsoffsets[$pageno];
+                    $query .= " LIMIT " . $pagesize . " OFFSET  " .  $docoffsets[$pageno];
                 }
                 $dres = sqlStatement($query, $queryarr);
                 $drow = sqlFetchArray($dres);
@@ -438,12 +452,9 @@ window.onload = function() {
                $countdocQuery = "SELECT COUNT(*) as dc, d.id FROM documents AS d, categories_to_documents AS cd, categories AS c WHERE d.encounter_id = 0 AND d.foreign_id = ? AND cd.document_id = d.id AND c.id = cd.category_id ";
               $countDocs = sqlStatement($countdocQuery, $queryarr);
               $doccount = sqlFetchArray($countDocs);
-                //RM - add to possible record count unless tagged to an encounter
-              $numDocsNotTagged = $doccount['dc'];
-                $numRes +=  $numDocsNotTagged;
-            }
 
-(new SystemLogger())->debug("size, start, numRes", array( $pagesize, $pagestart, $numRes));
+                $numRes +=   $doccount['dc'];  // RM add documents not tagged to an encounter to the record count
+            }
 
             $sqlBindArray = array();
             if ($attendant_type == 'pid') {
@@ -479,32 +490,41 @@ window.onload = function() {
             //RM - add to possible doc count rather than replace a doc count
             $numRes += $count['c'];
 
-
             if ($pagesize > 0) {
-                // limit the number of encounters to report, but doesn't take into account the number of documents!!
                 $query .= " LIMIT " . escape_limit($pagestart) . "," . escape_limit($pagesize);
             }
-            $upper  = $pagestart + $pagesize;
+
+            //RM need to  include number of lines used for documents - so just use page size
+         //   $upper  = $pagestart + $pagesize
+         $upper = $pagesize * ($pageno +1);
             if (($upper > $numRes) || ($pagesize == 0)) {
                 $upper = $numRes;
             }
 
+  (new SystemLogger())->debug("522 pagestart, prev, docsoffsets, pageno, upperr ", array($pagestart, $prev_enctr_offset, $docoffsets,$pageno,$upper));
 
             if (($pagesize > 0) && ($pagestart > 0)) {
-                generatePageElement($pagestart - $pagesize, $pagesize, $billing_view, $issue, $pageno-1, $docsoffsets, "&lArr;" . htmlspecialchars(xl("Prev"), ENT_NOQUOTES) . " ");
-            }
-            echo ($pagestart + 1) . "-" . $upper . " " . htmlspecialchars(xl('of'), ENT_NOQUOTES) . " " . $numRes;
+          //      generatePageElement($pagestart - $pagesize, $pagesize, $billing_view, $issue, $pageno-1, $docoffsets, "&lArr;" . htmlspecialchars(xl("Prev"), ENT_NOQUOTES) . " ");
 
-            // RM add number of docs shown to GET values - moved this code till after everything is displayed, so we can put the actual
+  (new SystemLogger())->debug("525 pagestart, prev, docsoffsets, pageno, upperr ", array($pagestart, $prev_enctr_offset, $docoffsets,$pageno,$upper));
+
+            // RM pagestart is encounter offset of previous page - we haven't started to change it yet
+                  generatePageElement($pagestart,  $pagesize, $encoffsets, $billing_view, $issue, $pageno-1, $docoffsets, "&lArr;" . htmlspecialchars(xl("Prev"), ENT_NOQUOTES) . " ");
+            }
+            //RM use page size to work out what to display for
+            echo (($pagesize * $pageno) + 1) . "-" . $upper . " " . htmlspecialchars(xl('of'), ENT_NOQUOTES) . " " . $numRes;
+
+// RM add number of docs shown to GET values - moved this code till after everything is displayed, so we can put the actual
             //number of documents displayed into the GET parameters - so the docs don't get repeated
           //  if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
             //    generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, $docsshown, " " . htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
         //    }
 
             $res4 = sqlStatement($query, $sqlBindArray);
-
+            $numencounterrows =0; //RM encounters displayed
             while ($result4 = sqlFetchArray($res4)) {
                     // $href = "javascript:window.toencounter(" . $result4['encounter'] . ")";
+                    $numencounterrows++;
                     $reason_string = "";
                     $auth_sensitivity = true;
 
@@ -538,7 +558,13 @@ window.onload = function() {
 
                    // This generates document lines as appropriate for the date order.
                 while ($drow && $raw_encounter_date && $drow['docdate'] > $raw_encounter_date) {
-                        showDocument($drow);
+                       showDocument($drow);
+
+                        //RM don't display too many lines
+                        if ($pagesize > 0 && $linesleft <=0) {
+                             (new SystemLogger())->debug("548 run out of room for docs: size, start, numRes, linesleft", array( $pagesize, $pagestart, $numRes, $linesleft));
+                             break;
+                        }
                         $drow = sqlFetchArray($dres);
                 }
                     // Fetch all forms for this encounter, if the user is authorized to see
@@ -887,23 +913,46 @@ window.onload = function() {
                 }
 
                     echo "</tr>\n";
+
+                    $linesleft--;  //RM reduce lines left on the page
+                    $pagestart++;  //RM increase next offset
+
+                    if($pagesize > 0 && $linesleft <= 0){
+                        //RM reset where to start on next page
+                        (new SystemLogger())->debug("903 run out of room for encs: size, start, numRes, linesleft", array($pagesize, $pagestart, $numRes, $linesleft));
+                        break;
+                    }
             } // end while
 
             // Dump remaining document lines if count not exceeded - but only if room on the page.
            while ($drow  ) {
-                showDocument($drow);
-                $drow = sqlFetchArray($dres);
+
+                  //RM don't display too many lines
+                  if ($pagesize > 0 && $linesleft <=0) {
+                         (new SystemLogger())->debug("916 run out of room for last docs: size, start, numRes, linesleft", array( $pagesize, $pagestart, $numRes, $linesleft));
+                   break;
+                  }
+
+                  $drow = sqlFetchArray($dres);
+               showDocument($drow);
+
             }
 
             // update $GET parameters with the document count
              // RM add number of docs shown to GET values and show values for the next page
 
-              $docsoffsets[$pageno+1] = $docsoffsets[$pageno] + $docsshown ; // add the number of docs displayed on this page to offset for the next one
+              $docoffsets[$pageno+1] = $docoffsets[$pageno] + $docsshown ; // add the number of docs displayed on this page to offset for the next one
+ (new SystemLogger()) -> debug (" 965 for Next - prev, start", array($prev_enctr_offset, $pagestart));
+
+            $encoffsets[$pageno+1] = $pagestart;
 
             if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
-                generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, $pageno+1, $docsoffsets, " " . htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
-            }
+              //  generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, $pageno+1, $docoffsets, " " .
+             //   htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
 
+                 generatePageElement($pagestart, $pagesize, $encoffsets, $billing_view, $issue, $pageno+1, $docoffsets, " " .
+                htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
+            }
             ?>
 
         </table>
