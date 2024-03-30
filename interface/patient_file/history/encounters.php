@@ -942,11 +942,13 @@ window.onload = function() {
              // RM add number of docs shown to GET values and show values for the next page
 
               $docoffsets[$pageno+1] = $docoffsets[$pageno] + $docsshown ; // add the number of docs displayed on this page to offset for the next one
- (new SystemLogger()) -> debug (" 965 for Next - prev, start", array($prev_enctr_offset, $pagestart));
+ (new SystemLogger()) -> debug (" 965 for Next - prev, start", array($encoffsets[$pageno], $pagestart, $numRes));
 
             $encoffsets[$pageno+1] = $pagestart;
 
-            if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
+        //    if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
+            // RM pagestart no longer represents where the display starts
+            if ($pagesize > 0 && ($upper  < $numRes)) {
               //  generatePageElement($pagestart + $pagesize, $pagesize, $billing_view, $issue, $pageno+1, $docoffsets, " " .
              //   htmlspecialchars(xl("Next"), ENT_NOQUOTES) . "&rArr;");
 
