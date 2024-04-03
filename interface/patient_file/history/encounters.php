@@ -131,6 +131,8 @@ function showDocument(&$drow)
    global $ISSUE_TYPES, $auth_med, $docDisplayed;
    global $docsshown, $linesleft;
 
+(new SystemLogger())->debug("133 in doc  display : size, start, numRes, linesleft, own line ", array( $pagesize, $pagestart, $numRes, $linesleft, $docDisplayed));
+
     $docdate = $drow['docdate'];
 
     // if doc is already tagged by encounter it will be displayed in it's encounter's row
@@ -174,6 +176,7 @@ function showDocument(&$drow)
     $docDisplayed++;     //number of docs on their own line
     $docsshown++;          // number of docs shown all together - including tagged, i.e. use as offset next time
     $linesleft--;
+    (new SystemLogger())->debug("179 in end doc  display : size, start, numRes, linesleft, own line ", array( $pagesize, $pagestart, $numRes, $linesleft, $docDisplayed));
     }
 
 
@@ -455,7 +458,7 @@ window.onload = function() {
                     $queryarr[] = $issue;
                 }
                 $query .= "ORDER BY d.docdate DESC, d.id DESC";
-                (new SystemLogger())->debug("441 page no, offsets", array( $pageno, $docoffsets));
+                (new SystemLogger())->debug("461 page no, offsets", array( $pageno, $docoffsets));
 
                 //RM start after  docs already displayed
                 if ($pagesize > 0) {
@@ -573,14 +576,20 @@ window.onload = function() {
 
                    // This generates document lines as appropriate for the date order.
                 while ($drow && $raw_encounter_date && $drow['docdate'] > $raw_encounter_date) {
-                       showDocument($drow);
+
+                    showDocument($drow);
 
     (new SystemLogger())->debug("578 doc just displayed: size, start, numRes, linesleft, own line ", array( $pagesize, $pagestart, $numRes, $linesleft, $docDisplayed));
-                        //RM don't display too many lines
+
+    //RM don't display too many lines
                         if ($pagesize > 0 && $linesleft <=0) {
                              break;
                         }
                         $drow = sqlFetchArray($dres);
+                }
+                //RM if still room on the page - otherwise finish with this encounter
+                if ($pagesize > 0 && $linesleft <= 0) {
+                    break;
                 }
                     // Fetch all forms for this encounter, if the user is authorized to see
                     // this encounter's notes and this is the clinical view.
