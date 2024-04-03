@@ -131,7 +131,7 @@ function showDocument(&$drow)
    global $ISSUE_TYPES, $auth_med, $docDisplayed;
    global $docsshown, $linesleft;
 
-(new SystemLogger())->debug("133 in doc  display : size, start, numRes, linesleft, own line ", array( $pagesize, $pagestart, $numRes, $linesleft, $docDisplayed));
+(new SystemLogger())->debug("133 in doc  display doc :  linesleft, own line ", array($drow['document_name'], $linesleft, $docDisplayed));
 
     $docdate = $drow['docdate'];
 
@@ -176,7 +176,6 @@ function showDocument(&$drow)
     $docDisplayed++;     //number of docs on their own line
     $docsshown++;          // number of docs shown all together - including tagged, i.e. use as offset next time
     $linesleft--;
-    (new SystemLogger())->debug("179 in end doc  display : size, start, numRes, linesleft, own line ", array( $pagesize, $pagestart, $numRes, $linesleft, $docDisplayed));
     }
 
 
@@ -335,7 +334,7 @@ window.onload = function() {
     }
     $pagestart = $encoffsets[$pageno];
 
-    (new SystemLogger())->debug("322 GET params, start,size,prevencs,docs,page,doclines" , array($_GET, $pagestart, $pagesize, $encoffsets, $docoffsets, $pageno, $alldoclines, $docDisplayed) );
+    //(new SystemLogger())->debug("322 GET params, start,size,prevencs,docs,page,doclines" , array($_GET, $pagestart, $pagesize, $encoffsets, $docoffsets, $pageno, $alldoclines, $docDisplayed) );
 
     //RM *** only display billing notes for the encounters, take account of lines used for documents as well as encounters.
    array_push ( $alldoclines , $docDisplayed) ; // record how many lines on each page are documents
@@ -523,7 +522,6 @@ window.onload = function() {
 
             if (($pagesize > 0) && ($pagestart > 0)) {
 
-  (new SystemLogger())->debug("525 pagestart, prev, docsoffsets, pageno, upperr ", array($pagestart, $prev_enctr_offset, $docoffsets,$pageno,$upper));
 
             // RM pagestart is encounter offset of previous page - we haven't started to change it yet
             // RM improve layout of prev and next buttons
@@ -943,7 +941,7 @@ window.onload = function() {
 
                     if($pagesize > 0 && $linesleft <= 0){
                         //RM reset where to start on next page
-                        (new SystemLogger())->debug("903 run out of room for encs: size, start, numRes, linesleft", array($pagesize, $pagestart, $numRes, $linesleft));
+           //             (new SystemLogger())->debug("903 run out of room for encs: size, start, numRes, linesleft", array($pagesize, $pagestart, $numRes, $linesleft));
                         break;
                     }
             } // end while
@@ -951,14 +949,18 @@ window.onload = function() {
             // Dump remaining document lines if count not exceeded - but only if room on the page.
            while ($drow  ) {
 
+
                   //RM don't display too many lines
                   if ($pagesize > 0 && $linesleft <=0) {
-                         (new SystemLogger())->debug("916 run out of room for last docs: size, start, numRes, linesleft", array( $pagesize, $pagestart, $numRes, $linesleft));
+             //            (new SystemLogger())->debug("916 run out of room for last docs: size, start, numRes, linesleft", array( $pagesize, $pagestart, $numRes, $linesleft));
                    break;
                   }
 
-                  $drow = sqlFetchArray($dres);
+                (new SystemLogger())->debug("963 display last docs", array( $drow['document_name']));
+
                showDocument($drow);
+
+               $drow = sqlFetchArray($dres);
 
             }
 
@@ -966,8 +968,6 @@ window.onload = function() {
              // RM add number of docs shown to GET values and show values for the next page
 
               $docoffsets[$pageno+1] = $docoffsets[$pageno] + $docsshown ; // add the number of docs displayed on this page to offset for the next one
- (new SystemLogger()) -> debug (" 965 for Next - prev, start", array($encoffsets[$pageno], $pagestart, $numRes));
-
             $encoffsets[$pageno+1] = $pagestart;
 
         //    if (($pagesize > 0) && ($pagestart + $pagesize <= $numRes)) {
@@ -986,16 +986,22 @@ window.onload = function() {
 
            //RM - repeat buttons at the bottom of the page
 
-            if (($pagesize > 0) && ($pageno > 0)) {
+            if ($pagesize > 0) {
+                  if ($pageno > 0) {
             // RM pagestart is encounter offset of previous page - we haven't started to change it yet
             // RM improve layout of prev and next buttons
                   generatePageElement($pagestart,  $pagesize, $encoffsets, $billing_view, $issue, $pageno-1, $docoffsets, $alldoclines, "&lArr;" . htmlspecialchars(xl("Prev | "), ENT_NOQUOTES) . " ");
-            }
+                }
+
             //RM use page size to work out what to display for
                 echo (($pagesize * $pageno) + 1) . "-" . $upper . " " . htmlspecialchars(xl('of'), ENT_NOQUOTES) . " " . $numRes;
-                generatePageElement($pagestart, $pagesize, $encoffsets, $billing_view, $issue, $pageno+1, $docoffsets, $alldoclines, " " .
-                htmlspecialchars(xl(" | Next"), ENT_NOQUOTES) . "&rArr;");
+
+                 if ($upper < $numRes) {
+                    generatePageElement($pagestart, $pagesize, $encoffsets, $billing_view, $issue, $pageno+1, $docoffsets, $alldoclines, " " .
+                    htmlspecialchars(xl(" | Next"), ENT_NOQUOTES) . "&rArr;");
+                }
                 echo "<br> <br>" ;
+            }
            ?>
     </div>
 
