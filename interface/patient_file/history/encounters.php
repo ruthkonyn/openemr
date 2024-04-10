@@ -16,7 +16,7 @@
  * version 2.1.1
  * make prev/next buttons more legible with a separator, and repeat at end of the table. Display doc correctly when it's the last record
  * version 2.1.2
- * display all documents correctly
+ * display all documents correctly - sometimes top prev button doesn't display
  *
  *
  * @package   OpenEMR
@@ -530,10 +530,10 @@ window.onload = function() {
                 $upper = $numRes;
             }
 
-            if (($pagesize > 0) && ($pagestart > 0)) {
+           // if (($pagesize > 0) && ($pagestart > 0)) {
 
-
-            // RM pagestart is encounter offset of previous page - we haven't started to change it yet
+            if (($pagesize > 0) && ($pageno > 0)) {
+            // RM pageno is better - takes account of both docs and encounters having been displayed
             // RM improve layout of prev and next buttons
                   generatePageElement($pagestart,  $pagesize, $encoffsets, $billing_view, $issue, $pageno-1, $lastdocids, $encspp, "&lArr;" . htmlspecialchars(xl("Prev | "), ENT_NOQUOTES) . " ");
             }
@@ -976,7 +976,6 @@ window.onload = function() {
             // update $GET parameters with the document count
              // RM add number of untagged docs shown to GET values and show values for the next page
 
-            //  $docoffsets[$pageno+1] = $docoffsets[$pageno] + $docsshown ; // add the number of docs displayed on this page to offset for the next one
             $lastdocids[$pageno+1] = $lastdocid ; // add the number of docs displayed on this page to offset for the next one
             $encoffsets[$pageno+1] = $pagestart;
 
