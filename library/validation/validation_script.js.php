@@ -49,6 +49,9 @@ function submitme(new_validate,e,form_id, constraints) {
 
         top.restoreSession();
 
+        //debug
+       //alert ("in submitme - constraints are " + constraints);
+
         //Use the old validation script if no parameter sent (backward compatibility)
         //if we want to use the "old" validate function (set in globals) the validate function that will be called is the one that
         // was on code up to today (the validate library was not loaded ( look at the top of this file)
@@ -95,12 +98,15 @@ function submitme(new_validate,e,form_id, constraints) {
             elements = validate.collectFormValues(form);
             //custom validate for multiple select(failed validate.js)
             //the validate js cannot handle the LBF multiple select fields
+
             for(var key in elements){
-
+              if (key.includes("ppsIE")) {
+                  //debug
+                 // alert("elements: key is <"  + key + "> " + elements[key]);
+                  var savekey = key;
+            }
                 element = $('[name="'+ key + '"]');
-
                 if($(element).is('select[multiple]')) {
-
                     new_key = key.substring(0, key.length - 2);
                     if(validate.isObject(constraints[new_key])) {
                         //check if select multiple does empty (empty or unassigned)
@@ -120,22 +126,72 @@ function submitme(new_validate,e,form_id, constraints) {
             //error conatins an list of the elements and their errors
             //set false full message because the name of the input not can be translated
             var errors = validate(elements, constraints, {fullMessages: false});
-            if (typeof  errors !== 'undefined') {
+            //debug
+            alert ("validate called and returns : " + errors);
+            alert ("PPS value is: " + elements[savekey] ); // debug - gets the value of the pps number
+
+            if (typeof  errors !== 'undefined'  || (errors = check_pps_ie(elements[savekey])) ) {
                 //prevent default if trigger is submit button
                 if(typeof (e) !== 'undefined') {
                     e.preventDefault();
                 }
+                //debug
+                alert("form : " + form + " and errors : " + errors);
+
                 showErrors(form, errors);
                 valid = false;
-            }else{
-                somethingChanged = false;
+            }    else {
+               somethingChanged = false;
             }
+
+            function check_pps_ie (pps){
+                // check irish pps conforms to format
+                // see en.wikipedia.org/wiki/Personal_Public_Service_Number
+                var total = 0;
+                const weighting = [8,7,6,5,4,3,2,9];
+                var checkchar = '';
+                //debug
+                alert ("in check routine - pps is: " + pps);
+               for (i= 0; i<7;  i++ ) {
+                    // first 7 digits
+                    // cast integer digit to int and subtract '48' - ascii for '0'
+                   total  +=  Number (pps[i]) * weighting [i];
+               }
+               alert ("sum first 7 digits : " + total);
+               // 9th char - a=1, b=2 etc except w=0
+               if (pps[8] != 'W') {
+                    total += (pps.charCodeAt(8) - 64) * weighting [7];
+               }
+                // debug
+                alert (" 8th char added in to give : " + total + "where check char is : " + pps[7] );
+              var  mod23 = total % 23;
+                if (mod23 == 0) {
+                    checkchar = 'W';
+                } else {
+                   checkchar =  64 + mod23 ;
+             }
+                // debug
+                alert ("check char is : " + checkchar + " compared to pps 8th char which is: " +  pps.charCodeAt(7) );
+                if (pps.charCodeAt(7) !== checkchar) {
+                    //debug
+                    alert("return error message");
+                    return ("check character error");
+                 //  return ( $("ppsIE", {'check character error'})) ;
+                }
+            //  return (pps[7] !== checkchar ? "check character error" : '' ) ;
+            alert ("all ok so return undefined");
+            return (false);
+            }
+
 
             //In case there were errors they are displayed with this functionn
             function showErrors(form, errors) {
-
+    // debug
+                alert("in showErrors - form and errors : " + form + "  " + errors);
                 for (var key in errors) {
                     element = $('[name="'+ key + '"]');
+                    //debug
+                   alert ("  key and element : " + key + " " + element['name']);
                     if (errors.hasOwnProperty(key)) {
                         appendError(element, key, errors[key][0])
                     }

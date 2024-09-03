@@ -64,7 +64,8 @@ $datatypes = array(
     "51" => xl("Patient"),
     "52" => xl("Previous Names"),
     "53" => xl("Patient Encounters List"),
-    "54" => xl("Address List")
+    "54" => xl("Address List"),
+    "55" => xlt("IE PPS Number")
 );
 
 // These are the data types that can reference a list.
@@ -83,3 +84,35 @@ $UOR = array(
     1 => xl('Optional'),
     2 => xl('Required'),
 );
+
+function generate_IE_PPSNumber ( $patient_id)
+{
+      /* use day of year (3 chars) and time of day in minutes (4 chars) and first character of patient's surname as last character, then generate the check character. return string of 9 characters
+    * so potentially only unique within a minute for two people with the same initial character in their surname
+    */
+
+    $ppsnumber = 0;
+     $multipliers = [8,7,6,5,4,3,2];
+    /* generate a unique PPS number using IE format https://en.wikipedia.org/wiki/Personal_Public_Service_Number */
+    $date = new DateTimeImmutable();
+    $day = $date->format('zzz');
+    $minutes = $date->format('h')*60 . $date->format('m');
+    $string = $day . $minutes;
+
+
+    //generate the check character
+    for ($i=0; $i<7; $i++) {
+        $checkno += int ($string[i]) * $multipliers[i];
+    }
+     // sql to get patient's surname
+    // get first char and generate an integer from it
+
+    $checkno += $charint;
+
+    $checkno = gmp_mod( $checkno, 23 );
+    // generate check character
+
+    $string += $checkchar . $firstchar;
+
+    return ($string);
+}

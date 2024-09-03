@@ -405,6 +405,7 @@ if(dateVal > currentDate)
 <?php
 /*Get the constraint from the DB-> LBF forms accordinf the form_id*/
 $constraints = LBF_Validation::generate_validate_constraints("DEM");
+echo "constraints are: " . $constraints . "... and new validate is " . $new_validate ;
 ?>
 <script> var constraints = <?php echo $constraints;?>; </script>
 
