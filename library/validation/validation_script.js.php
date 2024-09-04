@@ -126,21 +126,16 @@ function submitme(new_validate,e,form_id, constraints) {
             //error conatins an list of the elements and their errors
             //set false full message because the name of the input not can be translated
             var errors = validate(elements, constraints, {fullMessages: false});
-            //debug
-            str = JSON.stringify(errors);
-            alert ("validate called and returns : " + str + "where PPS value is: " + elements[savekey] ); // debug - gets the value of the pps number
-
 
             if (typeof  errors !== 'undefined'  || (errors = check_pps_ie(elements[savekey])) ) {
+                //debug
                 str = JSON.stringify(errors);
-               alert ("any error value is: " + str );
+               alert ("an error  - 'errors' value is: " + str +  " and form : " + JSON.stringify(form ));
 
                 //prevent default if trigger is submit button
                 if(typeof (e) !== 'undefined') {
                     e.preventDefault();
                 }
-                //debug
-                alert("form : " + form + " and errors : " + errors);
 
                 showErrors(form, errors);
                 valid = false;
@@ -148,9 +143,11 @@ function submitme(new_validate,e,form_id, constraints) {
                somethingChanged = false;
             }
 
-            function check_pps_ie (pps){
+                // rm - funciton to validate an irish PPS number
                 // check irish pps conforms to format
                 // see en.wikipedia.org/wiki/Personal_Public_Service_Number
+
+            function check_pps_ie (pps){
                 var total = 0;
                 const weighting = [8,7,6,5,4,3,2,9];
                 var checkchar = '';
@@ -190,7 +187,9 @@ function submitme(new_validate,e,form_id, constraints) {
             //In case there were errors they are displayed with this functionn
             function showErrors(form, errors) {
     // debug
-                alert("in showErrors - form and errors : " + form + "  " + errors);
+                str = JSON.stringify(form);
+                alert("in showErrors - form and errors : " + str + " - " + errors);
+
                 for (var key in errors) {
                     element = $('[name="'+ key + '"]');
                     //debug
