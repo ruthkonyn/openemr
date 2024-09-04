@@ -100,10 +100,10 @@ function submitme(new_validate,e,form_id, constraints) {
             //the validate js cannot handle the LBF multiple select fields
 
             for(var key in elements){
-              if (key.includes("ppsIE")) {
+              if (key == "form_ppsIE"){
                   //debug
-                 // alert("elements: key is <"  + key + "> " + elements[key]);
-                  var savekey = key;
+                 alert("elements: key is <"  + key + "> " + elements[key]);
+                  var savekey = key; //rm save the PPSIE key
             }
                 element = $('[name="'+ key + '"]');
                 if($(element).is('select[multiple]')) {
@@ -127,10 +127,14 @@ function submitme(new_validate,e,form_id, constraints) {
             //set false full message because the name of the input not can be translated
             var errors = validate(elements, constraints, {fullMessages: false});
             //debug
-            alert ("validate called and returns : " + errors);
-            alert ("PPS value is: " + elements[savekey] ); // debug - gets the value of the pps number
+            str = JSON.stringify(errors);
+            alert ("validate called and returns : " + str + "where PPS value is: " + elements[savekey] ); // debug - gets the value of the pps number
+
 
             if (typeof  errors !== 'undefined'  || (errors = check_pps_ie(elements[savekey])) ) {
+                str = JSON.stringify(errors);
+               alert ("any error value is: " + str );
+
                 //prevent default if trigger is submit button
                 if(typeof (e) !== 'undefined') {
                     e.preventDefault();
@@ -157,13 +161,13 @@ function submitme(new_validate,e,form_id, constraints) {
                     // cast integer digit to int and subtract '48' - ascii for '0'
                    total  +=  Number (pps[i]) * weighting [i];
                }
-               alert ("sum first 7 digits : " + total);
+             //  alert ("sum first 7 digits : " + total);
                // 9th char - a=1, b=2 etc except w=0
                if (pps[8] != 'W') {
                     total += (pps.charCodeAt(8) - 64) * weighting [7];
                }
                 // debug
-                alert (" 8th char added in to give : " + total + "where check char is : " + pps[7] );
+            //   alert (" 8th char added in to give : " + total + "where check char is : " + pps[7] );
               var  mod23 = total % 23;
                 if (mod23 == 0) {
                     checkchar = 'W';
@@ -171,12 +175,11 @@ function submitme(new_validate,e,form_id, constraints) {
                    checkchar =  64 + mod23 ;
              }
                 // debug
-                alert ("check char is : " + checkchar + " compared to pps 8th char which is: " +  pps.charCodeAt(7) );
+             //   alert ("check char is : " + checkchar + " compared to pps 8th char which is: " +  pps.charCodeAt(7) );
                 if (pps.charCodeAt(7) !== checkchar) {
                     //debug
                     alert("return error message");
-                    return ("check character error");
-                 //  return ( $("ppsIE", {'check character error'})) ;
+                   return ("form_ppsIE" , ['check character error']);
                 }
             //  return (pps[7] !== checkchar ? "check character error" : '' ) ;
             alert ("all ok so return undefined");
