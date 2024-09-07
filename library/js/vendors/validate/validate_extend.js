@@ -251,7 +251,7 @@ validate.validators.ppsIE = function(value, options) {
     // exit if options = false
     if(!options) return;
 
-    var formatexp = /[0-9]{7}[A-Z][A-Z]/;
+    var formatexp = /[0-9]{7}[A-Z][A-Z]?/; //last character can be missing with historic numbers
 
     if(!formatexp.test (pps)){return"incorrect format";}
 
@@ -260,8 +260,8 @@ validate.validators.ppsIE = function(value, options) {
                     // cast integer digit to int and subtract '48' - ascii for '0'
         total  +=  Number (pps[i]) * weighting [i];
     }
-    // 9th char - a=1, b=2 etc except w=0
-    if (pps[8] != 'W') {
+    // 9th char - a=1, b=2 etc except w=0 and if empty use 0
+    if (pps[8] && pps[8] != 'W') {
         total += (pps.charCodeAt(8) - 64) * weighting [7];
         }
     var  mod23 = total % 23;
