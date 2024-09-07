@@ -217,6 +217,7 @@ validate.validators.luhn = function(value, options) {
         };
     }([0, 2, 4, 6, 8, 1, 3, 5, 7, 9]));
 
+
     //exit if empty value
     if(validate.isEmpty(value)) { return; }
     // exit if options = false
@@ -233,5 +234,45 @@ validate.validators.luhn = function(value, options) {
     }
 }
 
+/*
+ * PPS number for Ireland, has a specific format -
+ * rm - funciton to validate an irish PPS number
+  * check irish pps conforms to format
+   * see en.wikipedia.org/wiki/Personal_Public_Service_Number
+   *
+   */
+validate.validators.ppsIE = function(value, options) {
+    var pps = value;
+    var total = 0;
+    const weighting = [8,7,6,5,4,3,2,9];
+    var checkchar = '';
+    //exit if empty value
+    if(validate.isEmpty(value)) { return; }
+    // exit if options = false
+    if(!options) return;
 
+    var formatexp = /[0-9]{7}[A-Z][A-Z]/;
 
+    if(!formatexp.test (pps)){return"incorrect format";}
+
+    for (i= 0; i<7;  i++ ) {
+                    // first 7 digits
+                    // cast integer digit to int and subtract '48' - ascii for '0'
+        total  +=  Number (pps[i]) * weighting [i];
+    }
+    // 9th char - a=1, b=2 etc except w=0
+    if (pps[8] != 'W') {
+        total += (pps.charCodeAt(8) - 64) * weighting [7];
+        }
+    var  mod23 = total % 23;
+    if (mod23 == 0) {
+        checkchar = 'W';
+    } else {
+        checkchar =  64 + mod23 ;
+    }
+    if (pps.charCodeAt(7) !== checkchar) {
+        return "check character error";
+    }
+    //alert ("all ok so return undefined");
+    return;
+}

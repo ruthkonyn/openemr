@@ -49,12 +49,11 @@ function submitme(new_validate,e,form_id, constraints) {
 
         top.restoreSession();
 
-        //debug
-       //alert ("in submitme - constraints are " + constraints);
-
         //Use the old validation script if no parameter sent (backward compatibility)
         //if we want to use the "old" validate function (set in globals) the validate function that will be called is the one that
         // was on code up to today (the validate library was not loaded ( look at the top of this file)
+        //debug
+        //alert("in submitme");
         if (new_validate !== 1) {
             var f = document.forms[0];
             if (validate(f)) {
@@ -77,10 +76,12 @@ function submitme(new_validate,e,form_id, constraints) {
             var form = document.querySelector("form#"+form_id);
             //gets all the "elements" in the form and sends them to the validate library
             //for more information @see https://validatejs.org/
-            var elements = validate.collectFormValues(form);
+            var elements = validate.collectFormValues(form); /* get values for all elements that have 'name' specified */
+            /* returned an array of name, value pairs */
+
             var element, new_key;
 
-            //before catch all values - clear filed that in display none, this will enable to fail on this fields.
+            //before catch all values - clear filed that are not displayed () display none), this will enable to fail on this fields.
             for(var key in elements){
                     //catch th element with the name because the id of select-multiple contain '[]'
                    // and jquery throws error in those situation
@@ -98,14 +99,13 @@ function submitme(new_validate,e,form_id, constraints) {
             elements = validate.collectFormValues(form);
             //custom validate for multiple select(failed validate.js)
             //the validate js cannot handle the LBF multiple select fields
-
             for(var key in elements){
               if (key == "form_ppsIE"){
                   //debug
-                 alert("elements: key is <"  + key + "> " + elements[key]);
-                  var savekey = key; //rm save the PPSIE key
-            }
+                 alert("elements: key is <"  + key + "> " + "value is: " + elements[key]);
+                }
                 element = $('[name="'+ key + '"]');
+
                 if($(element).is('select[multiple]')) {
                     new_key = key.substring(0, key.length - 2);
                     if(validate.isObject(constraints[new_key])) {
@@ -127,10 +127,12 @@ function submitme(new_validate,e,form_id, constraints) {
             //set false full message because the name of the input not can be translated
             var errors = validate(elements, constraints, {fullMessages: false});
 
-            if (typeof  errors !== 'undefined'  || (errors = check_pps_ie(elements[savekey])) ) {
+            if (typeof  errors !== 'undefined'  ) {
                 //debug
-                str = JSON.stringify(errors);
-               alert ("an error  - 'errors' value is: " + str +  " and form : " + JSON.stringify(form ));
+
+                for (var key in errors) {
+                   alert (" validation returns:  key and bit of errors  : " + key + "- " + errors[key][0]);
+                }
 
                 //prevent default if trigger is submit button
                 if(typeof (e) !== 'undefined') {
@@ -143,11 +145,12 @@ function submitme(new_validate,e,form_id, constraints) {
                somethingChanged = false;
             }
 
+
                 // rm - funciton to validate an irish PPS number
                 // check irish pps conforms to format
                 // see en.wikipedia.org/wiki/Personal_Public_Service_Number
 
-            function check_pps_ie (pps){
+     /*       function original_check_pps_ie (form, pps){
                 var total = 0;
                 const weighting = [8,7,6,5,4,3,2,9];
                 var checkchar = '';
@@ -176,24 +179,21 @@ function submitme(new_validate,e,form_id, constraints) {
                 if (pps.charCodeAt(7) !== checkchar) {
                     //debug
                     alert("return error message");
-                   return ("form_ppsIE" , ['check character error']);
+                   //return ("form_ppsIE" , ['check character error']);
+                    return (["PPSIE", ["check character error", "another thing"]]);
                 }
             //  return (pps[7] !== checkchar ? "check character error" : '' ) ;
             alert ("all ok so return undefined");
             return (false);
             }
 
-
+*/
             //In case there were errors they are displayed with this functionn
             function showErrors(form, errors) {
-    // debug
-                str = JSON.stringify(form);
-                alert("in showErrors - form and errors : " + str + " - " + errors);
 
                 for (var key in errors) {
                     element = $('[name="'+ key + '"]');
-                    //debug
-                   alert ("  key and element : " + key + " " + element['name']);
+
                     if (errors.hasOwnProperty(key)) {
                         appendError(element, key, errors[key][0])
                     }
@@ -203,6 +203,8 @@ function submitme(new_validate,e,form_id, constraints) {
             * append 'span' with error message
             */
             function appendError(input, id, message){
+
+                alert("append Error called");
 
                 //append 'span' tag for error massages if not exist
                 if($("#error_" + id).length == 0) {
